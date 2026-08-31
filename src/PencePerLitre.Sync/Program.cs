@@ -13,6 +13,26 @@ var clientId = Environment.GetEnvironmentVariable("FUEL_FINDER_CLIENT_ID")
 var clientSecret = Environment.GetEnvironmentVariable("FUEL_FINDER_CLIENT_SECRET") 
                    ?? Environment.GetEnvironmentVariable("ClientSecret");
 
+static string RedactSecret(string? value, int visiblePrefix = 4, int visibleSuffix = 4)
+{
+    if (string.IsNullOrEmpty(value))
+    {
+        return "<empty>";
+    }
+
+    if (value.Length <= visiblePrefix + visibleSuffix)
+    {
+        return new string('*', value.Length);
+    }
+
+    var prefix = value[..visiblePrefix];
+    var suffix = value[^visibleSuffix..];
+    var middle = new string('*', Math.Max(0, value.Length - visiblePrefix - visibleSuffix));
+    return $"{prefix}{middle}{suffix}";
+}
+
+Console.WriteLine($"Loaded credentials: ClientId={RedactSecret(clientId)} (len={clientId?.Length ?? 0}), ClientSecret={RedactSecret(clientSecret)} (len={clientSecret?.Length ?? 0})");
+
 // Parse CLI Arguments
 var argsList = args.ToList();
 bool isFullSync = argsList.Contains("--full");
