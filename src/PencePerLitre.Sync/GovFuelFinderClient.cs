@@ -15,6 +15,24 @@ public class GovFuelFinderClient : IDisposable
 
     private const string BaseUrl = "https://www.fuel-finder.service.gov.uk";
 
+    private static string RedactSecret(string? value, int visiblePrefix = 4, int visibleSuffix = 4)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "<empty>";
+        }
+
+        if (value.Length <= visiblePrefix + visibleSuffix)
+        {
+            return new string('*', value.Length);
+        }
+
+        var prefix = value[..visiblePrefix];
+        var suffix = value[^visibleSuffix..];
+        var middle = new string('*', Math.Max(0, value.Length - visiblePrefix - visibleSuffix));
+        return $"{prefix}{middle}{suffix}";
+    }
+
     public GovFuelFinderClient(string clientId, string clientSecret)
     {
         _clientId = clientId;
@@ -42,23 +60,53 @@ public class GovFuelFinderClient : IDisposable
             client_secret = _clientSecret
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/v1/oauth/generate_access_token", payload);
-        if (!response.IsSuccessStatusCode)
-        {
-            var errContent = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"OAuth token generation failed ({response.StatusCode}): {errContent}");
-        }
+        Console.WriteLine($"OAuth request URL: {BaseUrl}/api/v1/oauth/generate_access_token");
+        Console.WriteLine($"OAuth request payload: {{ client_id={RedactSecret(_clientId)}, client_id_length={_clientId.Length}, client_secret={RedactSecret(_clientSecret)}, client_secret_length={_clientSecret.Length} }}");
 
-        var oauthResult = await response.Content.ReadFromJsonAsync<GovOAuthResponse>(SharedJsonOptions.Default);
-        if (oauthResult?.Data == null || string.IsNullOrEmpty(oauthResult.Data.AccessToken))
+        try
         {
-            throw new InvalidOperationException($"Invalid OAuth response payload: {oauthResult?.Message}");
-        }
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/oauth/generate_access_token", payload);
+            var responseBody = await response.Content.ReadAsStringAsync();
 
-        _accessToken = oauthResult.Data.AccessToken;
-        _tokenExpiryUtc = DateTime.UtcNow.AddSeconds(oauthResult.Data.ExpiresIn);
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
-        Console.WriteLine($"Token acquired successfully. Expires at {_tokenExpiryUtc:u} (in {oauthResult.Data.ExpiresIn}s)");
+            Console.WriteLine($"OAuth response status: {(int)response.StatusCode} {response.StatusCode}");
+            Console.WriteLine("OAuth response headers:");
+            foreach (var header in response.Headers)
+            {
+                Console.WriteLine($"  {header.Key}: {string.Join(", ", header.Value)}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(responseBody))
+            {
+                Console.WriteLine($"OAuth response body: {responseBody}");
+            }
+            else
+            {
+                Console.WriteLine("OAuth response body: <empty>");
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"OAuth token generation failed ({response.StatusCode}): {responseBody}");
+            }
+
+            var oauthResult = await response.Content.ReadFromJsonAsync<GovOAuthResponse>(SharedJsonOptions.Default);
+            if (oauthResult?.Data == null || string.IsNullOrEmpty(oauthResult.Data.AccessToken))
+            {
+                throw new InvalidOperationException($"Invalid OAuth response payload: {oauthResult?.Message}");
+            }
+
+            _accessToken = oauthResult.Data.AccessToken;
+            _tokenExpiryUtc = DateTime.UtcNow.AddSeconds(oauthResult.Data.ExpiresIn);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            Console.WriteLine($"Token acquired successfully. Expires at {_tokenExpiryUtc:u} (in {oauthResult.Data.ExpiresIn}s)");
+            return;
+        }
+        catch (HttpRequestException ex)
+        {
+            Console.WriteLine($"HTTP request exception during OAuth token generation: {ex.Message}");
+            Console.WriteLine($"Inner exception: {ex.InnerException?.Message}");
+            throw;
+        }
     }
 
     /// <summary>
