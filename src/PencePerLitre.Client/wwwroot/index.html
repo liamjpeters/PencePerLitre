@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-900">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Pence Per Litre | Live UK Fuel Prices</title>
+    <base href="/" />
+
+    <!-- Meta / SEO / PWA -->
+    <meta name="description" content="Find the cheapest petrol and diesel prices near you in the UK. 100% free, privacy-first, on-device search powered by Gov.UK Fuel Finder." />
+    <meta name="theme-color" content="#059669" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Local Leaflet CSS & JS (No external CDN tracking) -->
+    <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
+    <script src="lib/leaflet/leaflet.js"></script>
+
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="PencePerLitre.Client.styles.css" rel="stylesheet" />
+</head>
+
+<body class="h-full antialiased selection:bg-emerald-500 selection:text-white">
+    <div id="app" class="h-full">
+        <div class="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+            <div class="relative flex items-center justify-center">
+                <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <div class="absolute text-emerald-400 font-bold text-xs">PPL</div>
+            </div>
+            <div class="text-center">
+                <h1 class="text-xl font-bold tracking-tight">Pence Per Litre</h1>
+                <p class="text-sm text-slate-400 mt-1">Loading live UK fuel prices & stations...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" class="hidden fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-3 text-sm">
+        <span>An error has occurred.</span>
+        <a href="" class="underline font-semibold reload">Reload</a>
+        <span class="cursor-pointer dismiss text-red-200 hover:text-white font-bold ml-2">✕</span>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

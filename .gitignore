@@ -1,0 +1,28 @@
+# Environment & Secrets
+.env
+*.env
+appsettings.local.json
+
+# .NET Build artifacts
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio / VS Code / Rider
+.vs/
+.vscode/
+.idea/
+
+# SQLite local databases (persisted via GitHub Releases in CI)
+*.db
+*.db-shm
+*.db-wal
+penceperlitre.db
+
+# OS / Temporary
+Thumbs.db
+.DS_Store

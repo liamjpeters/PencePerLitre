@@ -1,0 +1,181 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using PencePerLitre.Shared;
+
+namespace PencePerLitre.Sync;
+
+public class GovFuelFinderClient : IDisposable
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _clientId;
+    private readonly string _clientSecret;
+    private string? _accessToken;
+    private DateTime _tokenExpiryUtc = DateTime.MinValue;
+
+    private const string BaseUrl = "https://www.fuel-finder.service.gov.uk";
+
+    public GovFuelFinderClient(string clientId, string clientSecret)
+    {
+        _clientId = clientId;
+        _clientSecret = clientSecret;
+        _httpClient = new HttpClient
+        {
+            BaseAddress = new Uri(BaseUrl),
+            Timeout = TimeSpan.FromSeconds(60)
+        };
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PencePerLitre/1.0 (Mozilla/5.0; Windows NT 10.0; Win64; x64)");
+    }
+
+    public async Task EnsureAuthenticatedAsync()
+    {
+        if (!string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _tokenExpiryUtc.AddMinutes(-5))
+        {
+            return;
+        }
+
+        Console.WriteLine("Acquiring Gov.UK Fuel Finder OAuth access token...");
+        var payload = new
+        {
+            client_id = _clientId,
+            client_secret = _clientSecret
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/v1/oauth/generate_access_token", payload);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errContent = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"OAuth token generation failed ({response.StatusCode}): {errContent}");
+        }
+
+        var oauthResult = await response.Content.ReadFromJsonAsync<GovOAuthResponse>(SharedJsonOptions.Default);
+        if (oauthResult?.Data == null || string.IsNullOrEmpty(oauthResult.Data.AccessToken))
+        {
+            throw new InvalidOperationException($"Invalid OAuth response payload: {oauthResult?.Message}");
+        }
+
+        _accessToken = oauthResult.Data.AccessToken;
+        _tokenExpiryUtc = DateTime.UtcNow.AddSeconds(oauthResult.Data.ExpiresIn);
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+        Console.WriteLine($"Token acquired successfully. Expires at {_tokenExpiryUtc:u} (in {oauthResult.Data.ExpiresIn}s)");
+    }
+
+    /// <summary>
+    /// Fetches all forecourts across the UK, paginating batch by batch.
+    /// </summary>
+    public async Task<List<GovPfsStation>> FetchAllForecourtsAsync(string? effectiveStartTimestamp = null)
+    {
+        await EnsureAuthenticatedAsync();
+
+        var allForecourts = new List<GovPfsStation>();
+        int batchNumber = 1;
+        bool hasMore = true;
+
+        Console.WriteLine(string.IsNullOrEmpty(effectiveStartTimestamp)
+            ? "Fetching full forecourt metadata (PFS)..."
+            : $"Fetching incremental forecourt metadata since {effectiveStartTimestamp}...");
+
+        while (hasMore)
+        {
+            var uri = string.IsNullOrEmpty(effectiveStartTimestamp)
+                ? $"/api/v1/pfs?batch-number={batchNumber}"
+                : $"/api/v1/pfs?effective-start-timestamp={effectiveStartTimestamp}&batch-number={batchNumber}";
+
+            Console.Write($"  Fetching PFS batch #{batchNumber}... ");
+            var response = await _httpClient.GetAsync(uri);
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to fetch PFS batch {batchNumber} ({response.StatusCode}): {err}");
+            }
+
+            var batch = await response.Content.ReadFromJsonAsync<List<GovPfsStation>>(SharedJsonOptions.Default);
+            if (batch == null || batch.Count == 0)
+            {
+                Console.WriteLine("0 items returned (End of data).");
+                hasMore = false;
+            }
+            else
+            {
+                Console.WriteLine($"{batch.Count} items.");
+                allForecourts.AddRange(batch);
+                if (batch.Count < 500)
+                {
+                    hasMore = false;
+                }
+                else
+                {
+                    batchNumber++;
+                    // Small delay to be polite to the API
+                    await Task.Delay(150);
+                }
+            }
+        }
+
+        Console.WriteLine($"Total forecourts retrieved: {allForecourts.Count}");
+        return allForecourts;
+    }
+
+    /// <summary>
+    /// Fetches fuel prices, paginating batch by batch.
+    /// </summary>
+    public async Task<List<GovFuelStationPrice>> FetchFuelPricesAsync(string? effectiveStartTimestamp = null)
+    {
+        await EnsureAuthenticatedAsync();
+
+        var allPrices = new List<GovFuelStationPrice>();
+        int batchNumber = 1;
+        bool hasMore = true;
+
+        Console.WriteLine(string.IsNullOrEmpty(effectiveStartTimestamp)
+            ? "Fetching full fuel prices..."
+            : $"Fetching incremental fuel prices since {effectiveStartTimestamp}...");
+
+        while (hasMore)
+        {
+            var uri = string.IsNullOrEmpty(effectiveStartTimestamp)
+                ? $"/api/v1/pfs/fuel-prices?batch-number={batchNumber}"
+                : $"/api/v1/pfs/fuel-prices?effective-start-timestamp={effectiveStartTimestamp}&batch-number={batchNumber}";
+
+            Console.Write($"  Fetching Fuel Prices batch #{batchNumber}... ");
+            var response = await _httpClient.GetAsync(uri);
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to fetch Fuel Prices batch {batchNumber} ({response.StatusCode}): {err}");
+            }
+
+            var batch = await response.Content.ReadFromJsonAsync<List<GovFuelStationPrice>>(SharedJsonOptions.Default);
+            if (batch == null || batch.Count == 0)
+            {
+                Console.WriteLine("0 items returned (End of data).");
+                hasMore = false;
+            }
+            else
+            {
+                Console.WriteLine($"{batch.Count} items.");
+                allPrices.AddRange(batch);
+                if (batch.Count < 500)
+                {
+                    hasMore = false;
+                }
+                else
+                {
+                    batchNumber++;
+                    // Small delay to be polite to the API
+                    await Task.Delay(150);
+                }
+            }
+        }
+
+        Console.WriteLine($"Total fuel price station records retrieved: {allPrices.Count}");
+        return allPrices;
+    }
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
+        GC.SuppressFinalize(this);
+    }
+}

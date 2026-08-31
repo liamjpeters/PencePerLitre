@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PencePerLitre.Client/PencePerLitre.Client.csproj" />
+    <Project Path="src/PencePerLitre.Shared/PencePerLitre.Shared.csproj" />
+    <Project Path="src/PencePerLitre.Sync/PencePerLitre.Sync.csproj" />
+  </Folder>
+</Solution>

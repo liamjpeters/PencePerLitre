@@ -1,0 +1,628 @@
+@page "/"
+@inject FuelDataService FuelService
+@inject GeoLocationService GeoService
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Pence Per Litre | Live UK Fuel Prices</PageTitle>
+
+<div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Top Filter Bar -->
+    <div class="bg-white border-b border-slate-200 shadow-sm z-20 px-4 py-3 flex-shrink-0">
+        <div class="max-w-7xl mx-auto space-y-3">
+            <!-- Row 1: Search + Fuel Type Selector -->
+            <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 justify-between">
+                <!-- Search Input Group -->
+                <div class="flex items-center gap-2 flex-1 max-w-lg">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-sm">
+                            🔍
+                        </span>
+                        <input type="text" 
+                               @bind="searchQuery" 
+                               @bind:event="oninput"
+                               @onkeydown="HandleSearchKeyDown"
+                               placeholder="Enter UK Postcode (e.g. S1 1AA, SW1A)..."
+                               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all" />
+                        @if (!string.IsNullOrEmpty(searchQuery))
+                        {
+                            <button @onclick="ClearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                                ✕
+                            </button>
+                        }
+                    </div>
+
+                    <button @onclick="SearchByPostcode" 
+                            disabled="@isSearching"
+                            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-50">
+                        Search
+                    </button>
+
+                    <button @onclick="UseCurrentLocation" 
+                            disabled="@isSearching"
+                            title="Find fuel near my current GPS location"
+                            class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap">
+                        <span>📍</span>
+                        <span class="hidden sm:inline">Near Me</span>
+                    </button>
+                </div>
+
+                <!-- Fuel Type Pill Selector -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                    @foreach (var fuel in supportedFuels)
+                    {
+                        var isSelected = selectedFuelType == fuel.Key;
+                        <button @onclick="() => SelectFuelType(fuel.Key)"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all @(isSelected ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300" : "bg-slate-100 hover:bg-slate-200 text-slate-700")">
+                            @fuel.Value
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Row 2: Secondary Filters & View Toggles -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+                <!-- Radius & Sort -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5 text-slate-600">
+                        <span class="font-medium">Radius:</span>
+                        <select @bind="selectedRadius" @bind:after="ApplyFilters" class="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="3">3 miles</option>
+                            <option value="5">5 miles</option>
+                            <option value="10">10 miles</option>
+                            <option value="15">15 miles</option>
+                            <option value="25">25 miles</option>
+                            <option value="50">50 miles</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 text-slate-600">
+                        <span class="font-medium">Sort:</span>
+                        <select @bind="selectedSort" @bind:after="ApplyFilters" class="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="price">Cheapest First</option>
+                            <option value="distance">Nearest First</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Toggles & Mobile Switcher -->
+                <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-1 cursor-pointer text-slate-600 hover:text-slate-900 select-none">
+                        <input type="checkbox" @bind="supermarketOnly" @bind:after="ApplyFilters" class="rounded text-emerald-600 focus:ring-emerald-500" />
+                        <span>Supermarkets</span>
+                    </label>
+
+                    <label class="flex items-center gap-1 cursor-pointer text-slate-600 hover:text-slate-900 select-none ml-2">
+                        <input type="checkbox" @bind="open24hOnly" @bind:after="ApplyFilters" class="rounded text-emerald-600 focus:ring-emerald-500" />
+                        <span>24 Hours</span>
+                    </label>
+
+                    <!-- Mobile List/Map View Toggle -->
+                    <div class="flex md:hidden items-center bg-slate-200 p-0.5 rounded-lg ml-2">
+                        <button @onclick="() => mobileViewMode = MobileView.List" 
+                                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors @(mobileViewMode == MobileView.List ? "bg-white text-slate-900 shadow-xs" : "text-slate-600")">
+                            List
+                        </button>
+                        <button @onclick="() => mobileViewMode = MobileView.Map" 
+                                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors @(mobileViewMode == MobileView.Map ? "bg-white text-slate-900 shadow-xs" : "text-slate-600")">
+                            Map
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error/Status Bar if any -->
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between z-10">
+            <span class="flex items-center gap-1.5 font-medium">
+                <span>⚠️</span> @statusMessage
+            </span>
+            <button @onclick="() => statusMessage = null" class="text-amber-600 hover:text-amber-900 font-bold">✕</button>
+        </div>
+    }
+
+    <!-- Main Content Body: Split View -->
+    <div class="flex-1 flex overflow-hidden relative">
+        @if (isLoadingData)
+        {
+            <div class="absolute inset-0 z-30 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3">
+                <div class="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-sm font-semibold text-slate-700">Loading UK forecourts & prices...</p>
+            </div>
+        }
+
+        <!-- Left Column: Results List -->
+        <div class="w-full md:w-[480px] lg:w-[540px] flex flex-col border-r border-slate-200 bg-slate-50 flex-shrink-0 @(mobileViewMode == MobileView.Map ? "hidden md:flex" : "flex")">
+            <!-- Results Header Summary -->
+            <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 font-medium">
+                <span>
+                    @if (currentLocationName != null)
+                    {
+                        <span>Near <strong>@currentLocationName</strong>: </span>
+                    }
+                    <strong>@filteredStations.Count</strong> station@(filteredStations.Count == 1 ? "" : "s") found
+                </span>
+
+                @if (cheapestPrice != null)
+                {
+                    <span class="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                        Lowest: @cheapestPrice.Value.ToString("0.0")p
+                    </span>
+                }
+            </div>
+
+            <!-- Scrollable Stations List -->
+            <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+                @if (!filteredStations.Any() && !isLoadingData)
+                {
+                    <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-white rounded-2xl border border-dashed border-slate-300">
+                        <span class="text-4xl mb-2">🔍</span>
+                        <h4 class="font-bold text-slate-800 text-base">No stations found nearby</h4>
+                        <p class="text-xs text-slate-500 max-w-xs mt-1">
+                            Try increasing your search radius or entering a different UK postcode.
+                        </p>
+                        <button @onclick="async () => { selectedRadius = 25; await ApplyFilters(); }" 
+                                class="mt-4 px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800">
+                            Expand radius to 25 miles
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var item in filteredStations)
+                    {
+                        var isCheapest = cheapestPrice != null && item.SelectedFuelPrice == cheapestPrice;
+                        <div class="bg-white rounded-xl p-4 border transition-all duration-150 hover:shadow-md cursor-pointer @(isCheapest ? "border-emerald-300 ring-1 ring-emerald-300 shadow-xs" : "border-slate-200")"
+                             @onclick="() => OpenStationDetails(item)">
+                            
+                            <div class="flex items-start justify-between gap-3">
+                                <!-- Station Name & Details -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="px-2 py-0.5 rounded-md text-[11px] font-bold @GetBrandBadgeColor(item.Station.Brand)">
+                                            @(string.IsNullOrWhiteSpace(item.Station.Brand) ? "Independent" : item.Station.Brand)
+                                        </span>
+                                        @if (item.Station.Supermarket)
+                                        {
+                                            <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium">Supermarket</span>
+                                        }
+                                        @if (item.Station.Motorway)
+                                        {
+                                            <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium">Motorway</span>
+                                        }
+                                    </div>
+
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1 truncate">
+                                        @item.Station.Name
+                                    </h3>
+
+                                    <p class="text-xs text-slate-500 truncate mt-0.5">
+                                        @item.Station.Address
+                                    </p>
+
+                                    <div class="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                        @if (item.DistanceMiles.HasValue)
+                                        {
+                                            <span class="font-semibold text-slate-700 flex items-center gap-1">
+                                                <span>🚗</span> @item.DistanceMiles.Value.ToString("0.0") miles
+                                            </span>
+                                        }
+                                        <span>•</span>
+                                        <span>@item.Station.Postcode</span>
+                                    </div>
+                                </div>
+
+                                <!-- Price Display Box -->
+                                <div class="flex flex-col items-end flex-shrink-0">
+                                    @if (item.SelectedFuelPrice.HasValue)
+                                    {
+                                        <div class="px-3 py-1.5 rounded-xl text-center shadow-xs @(isCheapest ? "bg-emerald-600 text-white" : "bg-slate-900 text-white")">
+                                            <div class="text-base sm:text-lg font-black tracking-tight leading-tight">
+                                                @item.SelectedFuelPrice.Value.ToString("0.0")<span class="text-xs font-normal">p</span>
+                                            </div>
+                                            <div class="text-[9px] opacity-80 uppercase tracking-wider font-semibold">
+                                                @FuelTypeConstants.GetDisplayName(selectedFuelType).Split('(')[0].Trim()
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs text-slate-400 italic bg-slate-100 px-2 py-1 rounded-md">Price N/A</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Card Footer: Quick Actions -->
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                                <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                    @if (item.Prices.TryGetValue(selectedFuelType, out var pDto) && !string.IsNullOrEmpty(pDto.Updated))
+                                    {
+                                        <span>Updated @FormatTimeAgo(pDto.Updated)</span>
+                                    }
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <button @onclick:stopPropagation="true"
+                                            @onclick="() => FocusOnMap(item.Station.Lat, item.Station.Lon)"
+                                            class="text-emerald-700 hover:text-emerald-900 font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition-colors">
+                                        View on Map 📍
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Leaflet Map -->
+        <div class="flex-1 relative overflow-hidden @(mobileViewMode == MobileView.List ? "hidden md:block" : "block")">
+            <div id="fuel-map" class="absolute inset-0"></div>
+        </div>
+    </div>
+
+    <!-- Station Details Modal -->
+    @if (selectedStation != null)
+    {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+                <!-- Modal Header -->
+                <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <span class="px-2 py-0.5 rounded text-xs font-bold @GetBrandBadgeColor(selectedStation.Station.Brand)">
+                            @(string.IsNullOrWhiteSpace(selectedStation.Station.Brand) ? "Independent" : selectedStation.Station.Brand)
+                        </span>
+                        <h3 class="text-lg font-bold text-slate-900 mt-1">@selectedStation.Station.Name</h3>
+                        <p class="text-xs text-slate-500">@selectedStation.Station.Address, @selectedStation.Station.Postcode</p>
+                    </div>
+                    <button @onclick="() => selectedStation = null" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Fuel Prices Table -->
+                <div class="mt-4">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Live Fuel Prices (Pence Per Litre)</h4>
+                    @if (selectedStation.Prices.Any())
+                    {
+                        <div class="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2 px-3 font-semibold">Fuel Grade</th>
+                                        <th class="py-2 px-3 font-semibold text-right">Price</th>
+                                        <th class="py-2 px-3 font-semibold text-right">Last Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach (var p in selectedStation.Prices.OrderBy(x => x.Key))
+                                    {
+                                        <tr class="hover:bg-white transition-colors">
+                                            <td class="py-2.5 px-3 font-medium text-slate-800">
+                                                @FuelTypeConstants.GetDisplayName(p.Key)
+                                            </td>
+                                            <td class="py-2.5 px-3 font-bold text-slate-900 text-right text-sm">
+                                                @p.Value.Price.ToString("0.0")p
+                                            </td>
+                                            <td class="py-2.5 px-3 text-slate-400 text-right text-[11px]">
+                                                @(string.IsNullOrEmpty(p.Value.Updated) ? "Recent" : FormatTimeAgo(p.Value.Updated))
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-slate-400 italic">No live price reports recorded for this station yet.</p>
+                    }
+                </div>
+
+                <!-- Opening Hours & Amenities -->
+                <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1.5">🕒 Opening Hours</h4>
+                        @if (selectedStation.Station.Opening?.UsualDays != null)
+                        {
+                            <div class="space-y-1 text-slate-600">
+                                @foreach (var day in selectedStation.Station.Opening.UsualDays)
+                                {
+                                    <div class="flex justify-between">
+                                        <span class="capitalize">@day.Key:</span>
+                                        <span class="font-medium">@(day.Value.Is24Hours ? "24 Hours" : $"{day.Value.Open} - {day.Value.Close}")</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-slate-400">Hours not specified</span>
+                        }
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1.5">✨ Amenities</h4>
+                        @if (selectedStation.Station.Amenities != null && selectedStation.Station.Amenities.Any())
+                        {
+                            <div class="flex flex-wrap gap-1">
+                                @foreach (var amenity in selectedStation.Station.Amenities)
+                                {
+                                    <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] capitalize">
+                                        @amenity.Replace("_", " ")
+                                    </span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-slate-400">Standard forecourt facilities</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <a href="https://www.fuel-finder.service.gov.uk/motorist/price-report" target="_blank"
+                       class="text-[11px] text-slate-500 hover:text-emerald-700 underline flex items-center gap-1">
+                        <span>📢</span> Report Price Discrepancy (Gov.UK)
+                    </a>
+
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=@selectedStation.Station.Lat,@selectedStation.Station.Lon" 
+                           target="_blank"
+                           class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors">
+                            <span>🧭</span> Get Directions
+                        </a>
+                        <button @onclick="() => selectedStation = null" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private enum MobileView { List, Map }
+    private MobileView mobileViewMode = MobileView.List;
+
+    private bool isLoadingData = true;
+    private bool isSearching = false;
+    private string? statusMessage;
+
+    private string searchQuery = "";
+    private string? currentLocationName = null;
+    private double currentLat = 51.5074; // Default to London centre (map only, no search run)
+    private double currentLon = -0.1278;
+
+    private string selectedFuelType = FuelTypeConstants.E10;
+    private double selectedRadius = 10.0;
+    private string selectedSort = "price";
+    private bool supermarketOnly = false;
+    private bool open24hOnly = false;
+
+    private List<StationViewItem> filteredStations = new();
+    private StationViewItem? selectedStation;
+    private double? cheapestPrice;
+
+    private DotNetObjectReference<object>? dotNetHelper;
+
+    private readonly Dictionary<string, string> supportedFuels = new()
+    {
+        { FuelTypeConstants.E10, "Unleaded (E10)" },
+        { FuelTypeConstants.E5, "Super Unleaded (E5)" },
+        { FuelTypeConstants.B7Standard, "Diesel (B7)" },
+        { FuelTypeConstants.B7Premium, "Premium Diesel" },
+        { FuelTypeConstants.HVO, "HVO Diesel" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        dotNetHelper = DotNetObjectReference.Create<object>(this);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // 1. Initialize Map (UK overview)
+                await GeoService.InitMapAsync("fuel-map", dotNetHelper!, 54.5, -3.5, 6);
+
+                // 2. Load station data into memory
+                await FuelService.EnsureLoadedAsync();
+
+                // 3. Initialize on-device postcode pack (runs in background)
+                _ = GeoService.InitPostcodeEngineAsync();
+
+                isLoadingData = false;
+
+                // 4. Only run initial search if there's a query already set
+                if (!string.IsNullOrWhiteSpace(searchQuery))
+                {
+                    await SearchByPostcode();
+                }
+
+                // 5. Force Leaflet to recalculate map size now the DOM has settled
+                await Task.Delay(150);
+                await GeoService.InvalidateMapSizeAsync();
+            }
+            catch (Exception ex)
+            {
+                statusMessage = $"Failed to initialize fuel data: {ex.Message}";
+                isLoadingData = false;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchByPostcode();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = "";
+    }
+
+    private async Task SearchByPostcode()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery)) return;
+
+        isSearching = true;
+        statusMessage = null;
+
+        try
+        {
+            var res = await GeoService.LookupPostcodeAsync(searchQuery.Trim());
+            if (res.Success)
+            {
+                currentLat = res.Lat;
+                currentLon = res.Lon;
+                currentLocationName = res.Postcode ?? searchQuery.ToUpperInvariant();
+                await ApplyFilters();
+                await GeoService.SetMapViewAsync(currentLat, currentLon, 12);
+            }
+            else
+            {
+                statusMessage = $"Postcode not found: '{searchQuery}'. Please enter a valid UK postcode (e.g. S1 1AA).";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error resolving postcode: {ex.Message}";
+        }
+        finally
+        {
+            isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UseCurrentLocation()
+    {
+        isSearching = true;
+        statusMessage = null;
+
+        try
+        {
+            var pos = await GeoService.GetCurrentLocationAsync();
+            if (pos.Success)
+            {
+                currentLat = pos.Lat;
+                currentLon = pos.Lon;
+                currentLocationName = "Your Location";
+                searchQuery = "";
+                await ApplyFilters();
+                await GeoService.SetMapViewAsync(currentLat, currentLon, 13);
+            }
+            else
+            {
+                statusMessage = pos.Error ?? "Could not access your location.";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error getting location: {ex.Message}";
+        }
+        finally
+        {
+            isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectFuelType(string fuelType)
+    {
+        selectedFuelType = fuelType;
+        await ApplyFilters();
+    }
+
+    private async Task ApplyFilters()
+    {
+        filteredStations = FuelService.Search(
+            currentLat,
+            currentLon,
+            selectedRadius,
+            selectedFuelType,
+            supermarketOnly,
+            false,
+            open24hOnly,
+            selectedSort
+        );
+
+        cheapestPrice = filteredStations
+            .Where(s => s.SelectedFuelPrice.HasValue)
+            .Select(s => s.SelectedFuelPrice)
+            .DefaultIfEmpty(null)
+            .Min();
+
+        // Update map markers
+        await GeoService.UpdateMapMarkersAsync(filteredStations, (currentLat, currentLon));
+    }
+
+    private async Task FocusOnMap(double lat, double lon)
+    {
+        mobileViewMode = MobileView.Map;
+        await GeoService.SetMapViewAsync(lat, lon, 15);
+    }
+
+    private void OpenStationDetails(StationViewItem item)
+    {
+        selectedStation = item;
+    }
+
+    [JSInvokable]
+    public void OnStationMarkerClicked(string stationId)
+    {
+        var item = filteredStations.FirstOrDefault(s => s.Station.Id == stationId);
+        if (item != null)
+        {
+            selectedStation = item;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetBrandBadgeColor(string? brand)
+    {
+        var b = (brand ?? "").ToLowerInvariant();
+        if (b.Contains("shell")) return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+        if (b.Contains("bp")) return "bg-emerald-100 text-emerald-800 border border-emerald-300";
+        if (b.Contains("esso")) return "bg-red-100 text-red-800 border border-red-300";
+        if (b.Contains("tesco")) return "bg-blue-100 text-blue-800 border border-blue-300";
+        if (b.Contains("asda")) return "bg-lime-100 text-lime-800 border border-lime-300";
+        if (b.Contains("morrisons")) return "bg-yellow-100 text-yellow-900 border border-yellow-300";
+        if (b.Contains("sainsbury")) return "bg-orange-100 text-orange-800 border border-orange-300";
+        if (b.Contains("texaco")) return "bg-red-100 text-red-900 border border-red-300";
+        if (b.Contains("jet")) return "bg-amber-100 text-amber-900 border border-amber-300";
+        if (b.Contains("applegreen")) return "bg-emerald-100 text-emerald-900 border border-emerald-300";
+        return "bg-slate-100 text-slate-800 border border-slate-300";
+    }
+
+    private static string FormatTimeAgo(string isoDate)
+    {
+        if (DateTime.TryParse(isoDate, out var dt))
+        {
+            var span = DateTime.UtcNow - dt.ToUniversalTime();
+            if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+            if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+            return $"{(int)span.TotalDays}d ago";
+        }
+        return "Recent";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        dotNetHelper?.Dispose();
+    }
+}

@@ -1,0 +1,78 @@
+name: Sync Fuel Prices and Deploy to GitHub Pages
+
+on:
+  schedule:
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-deploy"
+  cancel-in-progress: false
+
+jobs:
+  sync-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore Master SQLite Database from GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Attempting to restore master SQLite DB from release 'data-latest'..."
+          gh release download data-latest -p "penceperlitre.db" || echo "No existing database asset found. A fresh database will be created."
+
+      - name: Run PencePerLitre Sync & ETL (.NET 10)
+        env:
+          FUEL_FINDER_CLIENT_ID: ${{ secrets.FUEL_FINDER_CLIENT_ID }}
+          FUEL_FINDER_CLIENT_SECRET: ${{ secrets.FUEL_FINDER_CLIENT_SECRET }}
+        run: |
+          dotnet run --project src/PencePerLitre.Sync/PencePerLitre.Sync.csproj -- --output src/PencePerLitre.Client/wwwroot/data
+
+      - name: Persist Updated SQLite DB to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f penceperlitre.db ]; then
+            echo "Persisting penceperlitre.db to release 'data-latest'..."
+            gh release view data-latest || gh release create data-latest penceperlitre.db --title "PencePerLitre Master Database" --notes "Automated release containing canonical SQLite fuel database."
+            gh release upload data-latest penceperlitre.db --clobber || true
+          fi
+
+      - name: Publish Blazor WebAssembly Client (.NET 10)
+        run: |
+          dotnet publish src/PencePerLitre.Client/PencePerLitre.Client.csproj -c Release -o dist
+
+      - name: Prepare GitHub Pages Assets
+        run: |
+          # Prevent Jekyll from ignoring _framework folder
+          touch dist/wwwroot/.nojekyll
+          # GitHub Pages SPA 404 redirect handler
+          cp dist/wwwroot/index.html dist/wwwroot/404.html
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/wwwroot
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
