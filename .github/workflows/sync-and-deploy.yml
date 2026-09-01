@@ -62,6 +62,12 @@ jobs:
         run: |
           dotnet publish src/PencePerLitre.Client/PencePerLitre.Client.csproj -c Release -o dist
 
+      - name: Configure CARTO API key
+        env:
+          CARTO_API_KEY: ${{ secrets.CARTO_API_KEY }}
+        run: |
+          node -e 'const fs = require("fs"); const value = process.env.CARTO_API_KEY; if (!value) throw new Error("CARTO_API_KEY secret is not configured."); fs.writeFileSync("dist/wwwroot/config.js", `globalThis.pencePerLitreConfig = ${JSON.stringify({ cartoApiKey: value })};\n`);'
+
       - name: Prepare GitHub Pages Assets
         run: |
           # Prevent Jekyll from ignoring _framework folder
@@ -77,4 +83,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

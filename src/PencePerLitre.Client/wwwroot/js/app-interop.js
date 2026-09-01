@@ -65,8 +65,15 @@ export function initMap(elementId, dotNetHelper, initialLat = 53.8008, initialLo
             attributionControl: true
         }).setView([initialLat, initialLon], initialZoom);
 
-        // Clean CartoDB Voyager tiles (100% free, fast, global)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        const cartoApiKey = globalThis.pencePerLitreConfig?.cartoApiKey;
+        if (!cartoApiKey) {
+            console.warn("CARTO API key is not configured; map tiles may display a watermark.");
+        }
+
+        const cartoTileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+            + (cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : '');
+
+        L.tileLayer(cartoTileUrl, {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 19
