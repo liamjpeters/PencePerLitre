@@ -32,6 +32,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Run Tests
+        run: dotnet test PencePerLitre.slnx --configuration Release
+
       - name: Restore Master SQLite Database from GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

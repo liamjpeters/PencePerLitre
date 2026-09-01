@@ -18,8 +18,10 @@ public class GovFuelFinderClient : IDisposable
     public GovFuelFinderClient(string clientId, string clientSecret)
     {
 
-        var baseUrl = Environment.GetEnvironmentVariable("FUEL_FINDER_BASE_URL")
-              ?? DefaultBaseUrl;
+        var configuredBaseUrl = Environment.GetEnvironmentVariable("FUEL_FINDER_BASE_URL");
+        var baseUrl = string.IsNullOrWhiteSpace(configuredBaseUrl)
+            ? DefaultBaseUrl
+            : configuredBaseUrl;
 
 
         _clientId = clientId;

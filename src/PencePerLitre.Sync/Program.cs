@@ -75,7 +75,7 @@ using var apiClient = new GovFuelFinderClient(clientId, clientSecret);
 try
 {
     bool needFullPfs = isFullSync || existingStations == 0 || (!isPricesOnly && ShouldRunDailyPfs(db));
-    bool needFullPrices = isFullSync || existingPrices == 0;
+    bool needFullPrices = isFullSync || existingPrices == 0 || ShouldRunDailyFullPrices(db);
 
     // -------------------------------------------------------------
     // Step 1: Sync Forecourts (PFS Metadata)
@@ -120,8 +120,10 @@ try
             Console.WriteLine("\n[2/2] Starting Full Fuel Prices Sync...");
             var prices = await apiClient.FetchFuelPricesAsync();
             Console.WriteLine($"Persisting fuel prices for {prices.Count} station records to SQLite...");
-            db.UpsertFuelPrices(prices);
-            db.SetSyncState("last_price_sync_utc", DateTime.UtcNow.ToString("o"));
+            db.UpsertFuelPrices(prices, replaceExisting: true);
+            var syncedAt = DateTime.UtcNow.ToString("o");
+            db.SetSyncState("last_price_sync_utc", syncedAt);
+            db.SetSyncState("last_full_price_sync_utc", syncedAt);
         }
         else
         {
@@ -167,6 +169,17 @@ catch (Exception ex)
 static bool ShouldRunDailyPfs(DatabaseManager db)
 {
     var lastSyncStr = db.GetSyncState("last_pfs_sync_utc");
+    if (string.IsNullOrEmpty(lastSyncStr)) return true;
+    if (DateTime.TryParse(lastSyncStr, out var lastSync))
+    {
+        return (DateTime.UtcNow - lastSync).TotalHours >= 20;
+    }
+    return true;
+}
+
+static bool ShouldRunDailyFullPrices(DatabaseManager db)
+{
+    var lastSyncStr = db.GetSyncState("last_full_price_sync_utc");
     if (string.IsNullOrEmpty(lastSyncStr)) return true;
     if (DateTime.TryParse(lastSyncStr, out var lastSync))
     {

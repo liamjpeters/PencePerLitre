@@ -3,5 +3,6 @@
     <Project Path="src/PencePerLitre.Client/PencePerLitre.Client.csproj" />
     <Project Path="src/PencePerLitre.Shared/PencePerLitre.Shared.csproj" />
     <Project Path="src/PencePerLitre.Sync/PencePerLitre.Sync.csproj" />
+    <Project Path="src/PencePerLitre.Tests/PencePerLitre.Tests.csproj" />
   </Folder>
 </Solution>

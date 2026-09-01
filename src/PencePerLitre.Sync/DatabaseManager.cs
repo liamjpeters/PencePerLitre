@@ -172,9 +172,24 @@ public class DatabaseManager : IDisposable
         transaction.Commit();
     }
 
-    public void UpsertFuelPrices(IEnumerable<GovFuelStationPrice> priceBatches)
+    public void UpsertFuelPrices(IEnumerable<GovFuelStationPrice> priceBatches, bool replaceExisting = false)
     {
+        var batches = priceBatches as IReadOnlyCollection<GovFuelStationPrice> ?? priceBatches.ToList();
+        if (replaceExisting && batches.Count == 0)
+        {
+            throw new InvalidOperationException("Cannot replace fuel prices with an empty snapshot.");
+        }
+
         using var transaction = _connection.BeginTransaction();
+
+        if (replaceExisting)
+        {
+            using var deleteCommand = _connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM fuel_prices";
+            deleteCommand.ExecuteNonQuery();
+        }
+
         using var cmd = _connection.CreateCommand();
         cmd.Transaction = transaction;
         cmd.CommandText = @"
@@ -194,7 +209,7 @@ public class DatabaseManager : IDisposable
         var pLastUpdated = cmd.Parameters.Add("$price_last_updated", SqliteType.Text);
         var pEffective = cmd.Parameters.Add("$price_change_effective_timestamp", SqliteType.Text);
 
-        foreach (var stationPrice in priceBatches)
+        foreach (var stationPrice in batches)
         {
             if (string.IsNullOrWhiteSpace(stationPrice.NodeId) || stationPrice.FuelPrices == null) continue;
 
@@ -264,7 +279,8 @@ public class DatabaseManager : IDisposable
                        latitude, longitude, is_motorway, is_supermarket, phone,
                        amenities_json, fuel_types_json, opening_json
                 FROM forecourts
-                WHERE permanent_closure = 0 AND latitude != 0 AND longitude != 0
+                                WHERE permanent_closure = 0 AND temporary_closure = 0
+                                    AND latitude != 0 AND longitude != 0
                 ORDER BY id
             ";
 
@@ -326,9 +342,13 @@ public class DatabaseManager : IDisposable
         using (var cmd = _connection.CreateCommand())
         {
             cmd.CommandText = @"
-                SELECT forecourt_id, fuel_type, price, price_last_updated, price_change_effective_timestamp
-                FROM fuel_prices
-                WHERE price > 0
+                                SELECT fp.forecourt_id, fp.fuel_type, fp.price,
+                                             fp.price_last_updated, fp.price_change_effective_timestamp
+                                FROM fuel_prices fp
+                                INNER JOIN forecourts f ON f.id = fp.forecourt_id
+                                WHERE fp.price > 0
+                                    AND f.permanent_closure = 0
+                                    AND f.temporary_closure = 0
             ";
 
             using var reader = cmd.ExecuteReader();

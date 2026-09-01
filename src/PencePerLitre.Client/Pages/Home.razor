@@ -495,7 +495,8 @@
             }
             else
             {
-                statusMessage = $"Postcode not found: '{searchQuery}'. Please enter a valid UK postcode (e.g. S1 1AA).";
+                statusMessage = res.Error
+                    ?? $"Postcode not found: '{searchQuery}'. Please enter a valid UK postcode (e.g. S1 1AA).";
             }
         }
         catch (Exception ex)

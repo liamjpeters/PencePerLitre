@@ -18,11 +18,23 @@ public class FuelDataService
         _http = http;
     }
 
-    public Task EnsureLoadedAsync()
+    public async Task EnsureLoadedAsync()
     {
-        if (IsLoaded) return Task.CompletedTask;
-        _initializationTask ??= LoadDataInternalAsync();
-        return _initializationTask;
+        if (IsLoaded) return;
+
+        var initializationTask = _initializationTask ??= LoadDataInternalAsync();
+        try
+        {
+            await initializationTask;
+        }
+        catch
+        {
+            if (ReferenceEquals(_initializationTask, initializationTask))
+            {
+                _initializationTask = null;
+            }
+            throw;
+        }
     }
 
     private async Task LoadDataInternalAsync()
@@ -40,8 +52,6 @@ public class FuelDataService
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading fuel data: {ex.Message}");
-            _stations ??= new List<StationDto>();
-            _prices ??= new Dictionary<string, Dictionary<string, PriceDto>>();
             throw;
         }
     }
@@ -85,7 +95,8 @@ public class FuelDataService
             if (motorwayOnly && !station.Motorway) continue;
             if (open24HoursOnly)
             {
-                var is24h = station.Opening?.UsualDays?.Values.Any(d => d.Is24Hours) == true;
+                var usualDays = station.Opening?.UsualDays;
+                var is24h = usualDays is { Count: > 0 } && usualDays.Values.All(d => d.Is24Hours);
                 if (!is24h) continue;
             }
 
