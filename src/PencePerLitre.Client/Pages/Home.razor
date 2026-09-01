@@ -8,14 +8,14 @@
 
 <div class="flex-1 flex flex-col overflow-hidden">
     <!-- Top Filter Bar -->
-    <div class="bg-white border-b border-slate-200 shadow-sm z-20 px-4 py-3 flex-shrink-0">
+    <div class="bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 z-20 px-4 py-3 flex-shrink-0 transition-colors">
         <div class="max-w-7xl mx-auto space-y-3">
             <!-- Row 1: Search + Fuel Type Selector -->
             <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 justify-between">
                 <!-- Search Input Group -->
                 <div class="flex items-center gap-2 flex-1 max-w-lg">
                     <div class="relative flex-1">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-sm">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-400 dark:text-neutral-500 text-sm">
                             🔍
                         </span>
                         <input type="text" 
@@ -23,10 +23,10 @@
                                @bind:event="oninput"
                                @onkeydown="HandleSearchKeyDown"
                                placeholder="Enter UK Postcode (e.g. S1 1AA, SW1A)..."
-                               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all" />
+                               class="w-full pl-9 pr-3 py-2 bg-neutral-100/70 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-950 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-600 text-sm font-medium focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600 focus:outline-none transition-all" />
                         @if (!string.IsNullOrEmpty(searchQuery))
                         {
-                            <button @onclick="ClearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                            <button @onclick="ClearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-100">
                                 ✕
                             </button>
                         }
@@ -34,14 +34,14 @@
 
                     <button @onclick="SearchByPostcode" 
                             disabled="@isSearching"
-                            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-50">
+                            class="px-4 py-2 bg-neutral-950 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-950 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50">
                         Search
                     </button>
 
                     <button @onclick="UseCurrentLocation" 
                             disabled="@isSearching"
                             title="Find fuel near my current GPS location"
-                            class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap">
+                            class="px-3 py-2 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap">
                         <span>📍</span>
                         <span class="hidden sm:inline">Near Me</span>
                     </button>
@@ -53,7 +53,7 @@
                     {
                         var isSelected = selectedFuelType == fuel.Key;
                         <button @onclick="() => SelectFuelType(fuel.Key)"
-                                class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all @(isSelected ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300" : "bg-slate-100 hover:bg-slate-200 text-slate-700")">
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors @(isSelected ? "bg-neutral-950 dark:bg-neutral-100 text-white dark:text-neutral-950" : "bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400")">
                             @fuel.Value
                         </button>
                     }
@@ -61,12 +61,12 @@
             </div>
 
             <!-- Row 2: Secondary Filters & View Toggles -->
-            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-900 text-xs">
                 <!-- Radius & Sort -->
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-1.5 text-slate-600">
+                    <div class="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
                         <span class="font-medium">Radius:</span>
-                        <select @bind="selectedRadius" @bind:after="ApplyFilters" class="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                        <select @bind="selectedRadius" @bind:after="ApplyFilters" class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1 text-xs font-medium text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600">
                             <option value="3">3 miles</option>
                             <option value="5">5 miles</option>
                             <option value="10">10 miles</option>
@@ -76,9 +76,9 @@
                         </select>
                     </div>
 
-                    <div class="flex items-center gap-1.5 text-slate-600">
+                    <div class="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
                         <span class="font-medium">Sort:</span>
-                        <select @bind="selectedSort" @bind:after="ApplyFilters" class="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                        <select @bind="selectedSort" @bind:after="ApplyFilters" class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1 text-xs font-medium text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600">
                             <option value="price">Cheapest First</option>
                             <option value="distance">Nearest First</option>
                         </select>
@@ -87,24 +87,24 @@
 
                 <!-- Toggles & Mobile Switcher -->
                 <div class="flex items-center gap-2">
-                    <label class="flex items-center gap-1 cursor-pointer text-slate-600 hover:text-slate-900 select-none">
-                        <input type="checkbox" @bind="supermarketOnly" @bind:after="ApplyFilters" class="rounded text-emerald-600 focus:ring-emerald-500" />
+                    <label class="flex items-center gap-1 cursor-pointer text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100 select-none">
+                        <input type="checkbox" @bind="supermarketOnly" @bind:after="ApplyFilters" class="rounded accent-neutral-950 dark:accent-neutral-100" />
                         <span>Supermarkets</span>
                     </label>
 
-                    <label class="flex items-center gap-1 cursor-pointer text-slate-600 hover:text-slate-900 select-none ml-2">
-                        <input type="checkbox" @bind="open24hOnly" @bind:after="ApplyFilters" class="rounded text-emerald-600 focus:ring-emerald-500" />
+                    <label class="flex items-center gap-1 cursor-pointer text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100 select-none ml-2">
+                        <input type="checkbox" @bind="open24hOnly" @bind:after="ApplyFilters" class="rounded accent-neutral-950 dark:accent-neutral-100" />
                         <span>24 Hours</span>
                     </label>
 
                     <!-- Mobile List/Map View Toggle -->
-                    <div class="flex md:hidden items-center bg-slate-200 p-0.5 rounded-lg ml-2">
+                    <div class="flex md:hidden items-center bg-neutral-100 dark:bg-neutral-900 p-0.5 rounded-lg ml-2">
                         <button @onclick="() => mobileViewMode = MobileView.List" 
-                                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors @(mobileViewMode == MobileView.List ? "bg-white text-slate-900 shadow-xs" : "text-slate-600")">
+                                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors @(mobileViewMode == MobileView.List ? "bg-white dark:bg-neutral-700 text-neutral-950 dark:text-neutral-50 shadow-xs" : "text-neutral-500")">
                             List
                         </button>
                         <button @onclick="() => mobileViewMode = MobileView.Map" 
-                                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors @(mobileViewMode == MobileView.Map ? "bg-white text-slate-900 shadow-xs" : "text-slate-600")">
+                                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors @(mobileViewMode == MobileView.Map ? "bg-white dark:bg-neutral-700 text-neutral-950 dark:text-neutral-50 shadow-xs" : "text-neutral-500")">
                             Map
                         </button>
                     </div>
@@ -116,20 +116,20 @@
     <!-- Error/Status Bar if any -->
     @if (!string.IsNullOrEmpty(statusMessage))
     {
-        <div class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between z-10">
+        <div class="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 flex items-center justify-between z-10">
             <span class="flex items-center gap-1.5 font-medium">
                 <span>⚠️</span> @statusMessage
             </span>
-            <button @onclick="() => statusMessage = null" class="text-amber-600 hover:text-amber-900 font-bold">✕</button>
+            <button @onclick="() => statusMessage = null" class="text-neutral-500 hover:text-neutral-950 dark:hover:text-neutral-50 font-bold">✕</button>
         </div>
     }
 
     <!-- Main Content Body: Split View -->
     <div class="flex-1 flex overflow-hidden relative">
         <!-- Left Column: Results List -->
-        <div class="w-full md:w-[480px] lg:w-[540px] flex flex-col border-r border-slate-200 bg-slate-50 flex-shrink-0 @(mobileViewMode == MobileView.Map ? "hidden md:flex" : "flex")">
+        <div class="w-full md:w-[480px] lg:w-[540px] flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-neutral-100/60 dark:bg-neutral-950 flex-shrink-0 @(mobileViewMode == MobileView.Map ? "hidden md:flex" : "flex")">
             <!-- Results Header Summary -->
-            <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 font-medium">
+            <div class="px-4 py-2.5 bg-neutral-100 dark:bg-neutral-900/70 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 font-medium">
                 <span>
                     @if (currentLocationName != null)
                     {
@@ -140,7 +140,7 @@
 
                 @if (cheapestPrice != null)
                 {
-                    <span class="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                    <span class="text-neutral-950 dark:text-neutral-100 font-bold bg-white dark:bg-neutral-800 px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700">
                         Lowest: @cheapestPrice.Value.ToString("0.0")p
                     </span>
                 }
@@ -150,14 +150,14 @@
             <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
                 @if (!filteredStations.Any())
                 {
-                    <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-white rounded-2xl border border-dashed border-slate-300">
+                    <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-neutral-900 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700">
                         <span class="text-4xl mb-2">🔍</span>
-                        <h4 class="font-bold text-slate-800 text-base">No stations found nearby</h4>
-                        <p class="text-xs text-slate-500 max-w-xs mt-1">
+                        <h4 class="font-bold text-neutral-900 dark:text-neutral-100 text-base">No stations found nearby</h4>
+                        <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs mt-1">
                             Try increasing your search radius or entering a different UK postcode.
                         </p>
                         <button @onclick="async () => { selectedRadius = 25; await ApplyFilters(); }" 
-                                class="mt-4 px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800">
+                                class="mt-4 px-4 py-1.5 bg-neutral-950 dark:bg-neutral-100 text-white dark:text-neutral-950 rounded-lg text-xs font-semibold hover:bg-neutral-800 dark:hover:bg-white">
                             Expand radius to 25 miles
                         </button>
                     </div>
@@ -167,7 +167,7 @@
                     @foreach (var item in filteredStations)
                     {
                         var isCheapest = cheapestPrice != null && item.SelectedFuelPrice == cheapestPrice;
-                        <div class="bg-white rounded-xl p-4 border transition-all duration-150 hover:shadow-md cursor-pointer @(isCheapest ? "border-emerald-300 ring-1 ring-emerald-300 shadow-xs" : "border-slate-200")"
+                        <div class="bg-white dark:bg-neutral-900 rounded-lg p-4 border transition-colors cursor-pointer hover:border-neutral-400 dark:hover:border-neutral-600 @(isCheapest ? "border-neutral-950 dark:border-neutral-100 ring-1 ring-neutral-950 dark:ring-neutral-100" : "border-neutral-200 dark:border-neutral-800")"
                              @onclick="() => OpenStationDetails(item)">
                             
                             <div class="flex items-start justify-between gap-3">
@@ -179,26 +179,26 @@
                                         </span>
                                         @if (item.Station.Supermarket)
                                         {
-                                            <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium">Supermarket</span>
+                                            <span class="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded font-medium">Supermarket</span>
                                         }
                                         @if (item.Station.Motorway)
                                         {
-                                            <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium">Motorway</span>
+                                            <span class="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded font-medium">Motorway</span>
                                         }
                                     </div>
 
-                                    <h3 class="font-bold text-slate-900 text-sm mt-1 truncate">
+                                    <h3 class="font-bold text-neutral-950 dark:text-neutral-100 text-sm mt-1 truncate">
                                         @item.Station.Name
                                     </h3>
 
-                                    <p class="text-xs text-slate-500 truncate mt-0.5">
+                                    <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
                                         @item.Station.Address
                                     </p>
 
-                                    <div class="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                    <div class="flex items-center gap-3 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                                         @if (item.DistanceMiles.HasValue)
                                         {
-                                            <span class="font-semibold text-slate-700 flex items-center gap-1">
+                                            <span class="font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
                                                 <span>🚗</span> @item.DistanceMiles.Value.ToString("0.0") miles
                                             </span>
                                         }
@@ -211,7 +211,7 @@
                                 <div class="flex flex-col items-end flex-shrink-0">
                                     @if (item.SelectedFuelPrice.HasValue)
                                     {
-                                        <div class="px-3 py-1.5 rounded-xl text-center shadow-xs @(isCheapest ? "bg-emerald-600 text-white" : "bg-slate-900 text-white")">
+                                        <div class="px-3 py-1.5 rounded-lg text-center bg-neutral-950 dark:bg-neutral-100 text-white dark:text-neutral-950">
                                             <div class="text-base sm:text-lg font-black tracking-tight leading-tight">
                                                 @item.SelectedFuelPrice.Value.ToString("0.0")<span class="text-xs font-normal">p</span>
                                             </div>
@@ -222,14 +222,14 @@
                                     }
                                     else
                                     {
-                                        <span class="text-xs text-slate-400 italic bg-slate-100 px-2 py-1 rounded-md">Price N/A</span>
+                                        <span class="text-xs text-neutral-400 dark:text-neutral-500 italic bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-md">Price N/A</span>
                                     }
                                 </div>
                             </div>
 
                             <!-- Card Footer: Quick Actions -->
-                            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                                <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <div class="mt-3 pt-2.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                                <div class="flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500">
                                     @if (item.Prices.TryGetValue(selectedFuelType, out var pDto) && !string.IsNullOrEmpty(pDto.Updated))
                                     {
                                         <span>Updated @FormatTimeAgo(pDto.Updated)</span>
@@ -239,7 +239,7 @@
                                 <div class="flex items-center gap-2">
                                     <button @onclick:stopPropagation="true"
                                             @onclick="() => FocusOnMap(item.Station.Lat, item.Station.Lon)"
-                                            class="text-emerald-700 hover:text-emerald-900 font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition-colors">
+                                            class="text-neutral-700 hover:text-neutral-950 dark:text-neutral-300 dark:hover:text-neutral-50 font-semibold px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                                         View on Map 📍
                                     </button>
                                 </div>
@@ -259,47 +259,47 @@
     <!-- Station Details Modal -->
     @if (selectedStation != null)
     {
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
+            <div class="bg-white dark:bg-neutral-900 rounded-lg max-w-lg w-full p-6 shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
                 <!-- Modal Header -->
-                <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-start justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
                     <div>
                         <span class="px-2 py-0.5 rounded text-xs font-bold @GetBrandBadgeColor(selectedStation.Station.Brand)">
                             @(string.IsNullOrWhiteSpace(selectedStation.Station.Brand) ? "Independent" : selectedStation.Station.Brand)
                         </span>
-                        <h3 class="text-lg font-bold text-slate-900 mt-1">@selectedStation.Station.Name</h3>
-                        <p class="text-xs text-slate-500">@selectedStation.Station.Address, @selectedStation.Station.Postcode</p>
+                        <h3 class="text-lg font-bold text-neutral-950 dark:text-neutral-100 mt-1">@selectedStation.Station.Name</h3>
+                        <p class="text-xs text-neutral-500 dark:text-neutral-400">@selectedStation.Station.Address, @selectedStation.Station.Postcode</p>
                     </div>
-                    <button @onclick="() => selectedStation = null" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">
+                    <button @onclick="() => selectedStation = null" class="text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-50 text-xl font-bold p-1">
                         ✕
                     </button>
                 </div>
 
                 <!-- Fuel Prices Table -->
                 <div class="mt-4">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Live Fuel Prices (Pence Per Litre)</h4>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Live Fuel Prices (Pence Per Litre)</h4>
                     @if (selectedStation.Prices.Any())
                     {
-                        <div class="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
+                        <div class="bg-neutral-50 dark:bg-neutral-950 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800">
                             <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                <thead class="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-b border-neutral-200 dark:border-neutral-700">
                                     <tr>
                                         <th class="py-2 px-3 font-semibold">Fuel Grade</th>
                                         <th class="py-2 px-3 font-semibold text-right">Price</th>
                                         <th class="py-2 px-3 font-semibold text-right">Last Updated</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
                                     @foreach (var p in selectedStation.Prices.OrderBy(x => x.Key))
                                     {
-                                        <tr class="hover:bg-white transition-colors">
-                                            <td class="py-2.5 px-3 font-medium text-slate-800">
+                                        <tr class="hover:bg-white dark:hover:bg-neutral-800 transition-colors">
+                                            <td class="py-2.5 px-3 font-medium text-neutral-800 dark:text-neutral-200">
                                                 @FuelTypeConstants.GetDisplayName(p.Key)
                                             </td>
-                                            <td class="py-2.5 px-3 font-bold text-slate-900 text-right text-sm">
+                                            <td class="py-2.5 px-3 font-bold text-neutral-950 dark:text-neutral-100 text-right text-sm">
                                                 @p.Value.Price.ToString("0.0")p
                                             </td>
-                                            <td class="py-2.5 px-3 text-slate-400 text-right text-[11px]">
+                                            <td class="py-2.5 px-3 text-neutral-400 dark:text-neutral-500 text-right text-[11px]">
                                                 @(string.IsNullOrEmpty(p.Value.Updated) ? "Recent" : FormatTimeAgo(p.Value.Updated))
                                             </td>
                                         </tr>
@@ -310,17 +310,17 @@
                     }
                     else
                     {
-                        <p class="text-xs text-slate-400 italic">No live price reports recorded for this station yet.</p>
+                        <p class="text-xs text-neutral-400 dark:text-neutral-500 italic">No live price reports recorded for this station yet.</p>
                     }
                 </div>
 
                 <!-- Opening Hours & Amenities -->
                 <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                        <h4 class="font-bold text-slate-700 mb-1.5">🕒 Opening Hours</h4>
+                        <h4 class="font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">🕒 Opening Hours</h4>
                         @if (selectedStation.Station.Opening?.UsualDays != null)
                         {
-                            <div class="space-y-1 text-slate-600">
+                            <div class="space-y-1 text-neutral-600 dark:text-neutral-400">
                                 @foreach (var day in selectedStation.Station.Opening.UsualDays)
                                 {
                                     <div class="flex justify-between">
@@ -332,18 +332,18 @@
                         }
                         else
                         {
-                            <span class="text-slate-400">Hours not specified</span>
+                            <span class="text-neutral-400 dark:text-neutral-500">Hours not specified</span>
                         }
                     </div>
 
                     <div>
-                        <h4 class="font-bold text-slate-700 mb-1.5">✨ Amenities</h4>
+                        <h4 class="font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">✨ Amenities</h4>
                         @if (selectedStation.Station.Amenities != null && selectedStation.Station.Amenities.Any())
                         {
                             <div class="flex flex-wrap gap-1">
                                 @foreach (var amenity in selectedStation.Station.Amenities)
                                 {
-                                    <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] capitalize">
+                                    <span class="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded text-[10px] capitalize">
                                         @amenity.Replace("_", " ")
                                     </span>
                                 }
@@ -351,25 +351,25 @@
                         }
                         else
                         {
-                            <span class="text-slate-400">Standard forecourt facilities</span>
+                            <span class="text-neutral-400 dark:text-neutral-500">Standard forecourt facilities</span>
                         }
                     </div>
                 </div>
 
                 <!-- Modal Actions -->
-                <div class="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="mt-6 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <a href="https://www.fuel-finder.service.gov.uk/motorist/price-report" target="_blank"
-                       class="text-[11px] text-slate-500 hover:text-emerald-700 underline flex items-center gap-1">
+                       class="text-[11px] text-neutral-500 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-50 underline flex items-center gap-1">
                         <span>📢</span> Report Price Discrepancy (Gov.UK)
                     </a>
 
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <a href="https://www.google.com/maps/dir/?api=1&destination=@selectedStation.Station.Lat,@selectedStation.Station.Lon" 
                            target="_blank"
-                           class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors">
+                           class="flex-1 sm:flex-none px-4 py-2 bg-neutral-950 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-950 font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors">
                             <span>🧭</span> Get Directions
                         </a>
-                        <button @onclick="() => selectedStation = null" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors">
+                        <button @onclick="() => selectedStation = null" class="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-semibold rounded-lg text-xs transition-colors">
                             Close
                         </button>
                     </div>

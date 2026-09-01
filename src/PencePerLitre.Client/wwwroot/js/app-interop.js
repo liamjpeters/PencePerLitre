@@ -3,7 +3,30 @@
 
 let leafletMap = null;
 let mapMarkersLayer = null;
+let mapTileLayer = null;
 let currentDotNetRef = null;
+
+function applyMapTheme() {
+    if (!leafletMap || typeof window.L === "undefined") return;
+
+    if (mapTileLayer) {
+        mapTileLayer.remove();
+    }
+
+    const cartoApiKey = globalThis.pencePerLitreConfig?.cartoApiKey;
+    const tileStyle = document.documentElement.classList.contains('dark') ? 'dark_all' : 'voyager';
+    const cartoTileUrl = `https://{s}.basemaps.cartocdn.com/rastertiles/${tileStyle}/{z}/{x}/{y}{r}.png`
+        + (cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : '');
+
+    mapTileLayer = L.tileLayer(cartoTileUrl, {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(leafletMap);
+    mapTileLayer.bringToBack();
+}
+
+window.addEventListener('ppl-theme-change', applyMapTheme);
 
 export function getCurrentLocation() {
     return new Promise((resolve) => {
@@ -65,19 +88,11 @@ export function initMap(elementId, dotNetHelper, initialLat = 53.8008, initialLo
             attributionControl: true
         }).setView([initialLat, initialLon], initialZoom);
 
-        const cartoApiKey = globalThis.pencePerLitreConfig?.cartoApiKey;
-        if (!cartoApiKey) {
+        if (!globalThis.pencePerLitreConfig?.cartoApiKey) {
             console.warn("CARTO API key is not configured; map tiles may display a watermark.");
         }
 
-        const cartoTileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-            + (cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : '');
-
-        L.tileLayer(cartoTileUrl, {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(leafletMap);
+        applyMapTheme();
 
         mapMarkersLayer = L.layerGroup().addTo(leafletMap);
 
@@ -119,8 +134,8 @@ export function updateMapMarkers(stations, userLocation) {
         const userIcon = L.divIcon({
             className: 'user-location-marker',
             html: `<div class="relative flex items-center justify-center">
-                    <span class="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-600 border-2 border-white shadow-md"></span>
+                    <span class="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-neutral-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-4 w-4 bg-neutral-950 dark:bg-neutral-100 border-2 border-white dark:border-neutral-950 shadow-md"></span>
                    </div>`,
             iconSize: [24, 24],
             iconAnchor: [12, 12]
@@ -143,9 +158,9 @@ export function updateMapMarkers(stations, userLocation) {
         const isCheapest = minPrice != null && price === minPrice;
 
         const priceText = price != null ? `${price.toFixed(1)}p` : 'N/A';
-        const badgeBg = isCheapest 
-            ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-300' 
-            : 'bg-slate-900 text-white font-semibold';
+        const badgeBg = isCheapest
+            ? 'bg-neutral-950 dark:bg-neutral-100 text-white dark:text-neutral-950 font-bold ring-2 ring-neutral-400'
+            : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-950 font-semibold';
 
         const markerHtml = `
             <div class="cursor-pointer transition-transform transform hover:scale-110 shadow-lg rounded-full px-2.5 py-1 text-xs flex items-center gap-1 border border-white ${badgeBg}">

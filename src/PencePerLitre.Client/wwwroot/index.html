@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50 text-slate-900">
+<html lang="en" class="h-full bg-neutral-50 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50">
 
 <head>
     <meta charset="utf-8" />
@@ -9,12 +9,42 @@
 
     <!-- Meta / SEO / PWA -->
     <meta name="description" content="Find the cheapest petrol and diesel prices near you in the UK. 100% free, privacy-first, on-device search powered by Gov.UK Fuel Finder." />
-    <meta name="theme-color" content="#059669" />
+    <meta name="theme-color" content="#fafafa" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="brand-mark.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <script type="importmap"></script>
+    <script>
+        (() => {
+            const storageKey = 'ppl-theme';
+            const readStoredTheme = () => {
+                try { return localStorage.getItem(storageKey); }
+                catch { return null; }
+            };
+            const applyTheme = (isDark) => {
+                document.documentElement.classList.toggle('dark', isDark);
+                document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+                document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark ? '#0a0a0a' : '#fafafa');
+                window.dispatchEvent(new CustomEvent('ppl-theme-change', { detail: { isDark } }));
+                return isDark;
+            };
+            const storedTheme = readStoredTheme();
+            applyTheme(storedTheme === 'dark' ||
+                (storedTheme === null && window.matchMedia('(prefers-color-scheme: dark)').matches));
+
+            globalThis.pencePerLitreTheme = {
+                isDark: () => document.documentElement.classList.contains('dark'),
+                toggle: () => {
+                    const isDark = !document.documentElement.classList.contains('dark');
+                    try { localStorage.setItem(storageKey, isDark ? 'dark' : 'light'); }
+                    catch { }
+                    return applyTheme(isDark);
+                }
+            };
+        })();
+    </script>
     <script src="config.js"></script>
 
     <!-- Local Leaflet CSS & JS (No external CDN tracking) -->
@@ -25,16 +55,16 @@
     <link href="PencePerLitre.Client.styles.css" rel="stylesheet" />
 </head>
 
-<body class="h-full antialiased selection:bg-emerald-500 selection:text-white">
+<body class="h-full antialiased selection:bg-neutral-900 selection:text-white dark:selection:bg-neutral-100 dark:selection:text-neutral-950">
     <div id="app" class="h-full">
-        <div class="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+        <div class="h-screen w-screen flex flex-col items-center justify-center bg-neutral-50 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50 gap-4">
             <div class="relative flex items-center justify-center">
-                <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                <div class="absolute text-emerald-400 font-bold text-xs">PPL</div>
+                <div class="w-16 h-16 border-2 border-neutral-300 dark:border-neutral-700 border-t-neutral-950 dark:border-t-neutral-50 rounded-full animate-spin"></div>
+                <div class="absolute font-bold text-xs">PPL</div>
             </div>
             <div class="text-center px-4">
                 <h1 class="text-xl font-bold tracking-tight">Pence Per Litre</h1>
-                <p class="text-sm text-slate-400 mt-1">Loading live UK fuel prices & stations...</p>
+                <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Loading live UK fuel prices & stations...</p>
             </div>
         </div>
     </div>

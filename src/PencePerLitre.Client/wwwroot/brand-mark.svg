@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pence Per Litre petrol pump">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0a0a0a"/>
+  <g fill="none" stroke="#fafafa" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+    <path d="M16 52h31"/>
+    <path d="M19 52V16a4 4 0 0 1 4-4h17a4 4 0 0 1 4 4v36"/>
+    <path d="M23 18h17v13H23z"/>
+    <path d="M44 25h4l5 7v13a4 4 0 0 1-8 0v-4"/>
+  </g>
+</svg>

@@ -1,28 +1,32 @@
 @inherits LayoutComponentBase
+@inject IJSRuntime JS
 
-<div class="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+<div class="h-screen flex flex-col bg-neutral-50 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-100 overflow-hidden transition-colors">
     <!-- Navigation Header -->
-    <header class="sticky top-0 z-30 bg-slate-900 text-white shadow-md border-b border-slate-800">
+    <header class="sticky top-0 z-30 bg-white/95 dark:bg-neutral-950/95 border-b border-neutral-200 dark:border-neutral-800 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-14">
                 <!-- Brand / Logo -->
-                <a href="/" class="flex items-center gap-2.5 hover:opacity-95 transition-opacity">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-black text-base shadow-sm">
-                        ⛽
-                    </div>
+                <a href="/" class="flex items-center gap-2.5 hover:opacity-70 transition-opacity">
+                    <img src="brand-mark.svg" alt="" class="w-8 h-8" />
                     <div>
-                        <span class="font-bold text-base sm:text-lg tracking-tight text-white">Pence Per Litre</span>
-                        <span class="hidden sm:inline-block text-xs text-emerald-400 font-medium ml-2 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800">
+                        <span class="font-bold text-base sm:text-lg tracking-tight">Pence Per Litre</span>
+                        <span class="hidden sm:inline-block text-xs text-neutral-500 dark:text-neutral-400 font-medium ml-2">
                             Live UK Prices
                         </span>
                     </div>
                 </a>
 
                 <!-- Privacy & Links -->
-                <div class="flex items-center gap-2 sm:gap-4">
+                <div class="flex items-center gap-1">
+                    <button @onclick="ToggleThemeAsync"
+                            title="@(isDarkMode ? "Use light theme" : "Use dark theme")"
+                            aria-label="@(isDarkMode ? "Use light theme" : "Use dark theme")"
+                            class="w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-50 dark:hover:bg-neutral-900 transition-colors">
+                        <span class="text-lg leading-none" aria-hidden="true">@(isDarkMode ? "☀" : "☾")</span>
+                    </button>
                     <button @onclick="() => showInfoModal = true" 
-                            class="text-xs sm:text-sm text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 border border-slate-700">
-                        <span>ℹ️</span>
+                            class="h-9 px-3 text-xs sm:text-sm text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-50 dark:hover:bg-neutral-900 rounded-lg font-medium transition-colors flex items-center gap-1.5">
                         <span>About</span>
                     </button>
                 </div>
@@ -38,20 +42,20 @@
     <!-- About & Privacy Modal -->
     @if (showInfoModal)
     {
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+            <div class="bg-white dark:bg-neutral-900 rounded-lg max-w-lg w-full p-6 shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
+                    <h3 class="text-lg font-bold text-neutral-950 dark:text-neutral-50 flex items-center gap-2">
                         <span>⛽</span> About Pence Per Litre
                     </h3>
-                    <button @onclick="() => showInfoModal = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">
+                    <button @onclick="() => showInfoModal = false" class="text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-50 text-xl font-bold p-1">
                         ✕
                     </button>
                 </div>
 
-                <div class="mt-4 space-y-4 text-sm text-slate-600 leading-relaxed">
+                <div class="mt-4 space-y-4 text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                     <div>
-                        <h4 class="font-semibold text-slate-900 mb-1">🏛️ Data Source & Frequency</h4>
+                        <h4 class="font-semibold text-neutral-950 dark:text-neutral-100 mb-1">🏛️ Data Source & Frequency</h4>
                         <p>
                             Fuel price and forecourt metadata is sourced directly from the official 
                             <strong>Gov.UK Fuel Finder Service</strong>. Prices are automatically updated multiple times daily via GitHub Actions.
@@ -59,30 +63,30 @@
                     </div>
 
                     <div>
-                        <h4 class="font-semibold text-slate-900 mb-1">🔒 100% Privacy-First</h4>
+                        <h4 class="font-semibold text-neutral-950 dark:text-neutral-100 mb-1">🔒 100% Privacy-First</h4>
                         <p>
                             This application has <strong>no analytics, no tracking cookies, and no telemetry</strong>.
                             Postcode lookups are resolved <strong>locally on your device</strong> using 
-                            <a href="https://codeberg.org/lexbailey/nearmypostcode" target="_blank" class="text-emerald-600 underline">NearMyPostcode</a>.
+                            <a href="https://codeberg.org/lexbailey/nearmypostcode" target="_blank" class="text-neutral-950 dark:text-neutral-100 underline">NearMyPostcode</a>.
                             Your search queries and GPS coordinates are never transmitted to our servers or any third-party.
                         </p>
                     </div>
 
                     <div>
-                        <h4 class="font-semibold text-slate-900 mb-1">⚖️ Impartiality & Price Discrepancies</h4>
+                        <h4 class="font-semibold text-neutral-950 dark:text-neutral-100 mb-1">⚖️ Impartiality & Price Discrepancies</h4>
                         <p>
                             In accordance with Gov.UK regulations, prices are presented impartially without supplier manipulation.
                             If you notice a discrepancy at any fuel station, you can report it directly to the government aggregator:
                         </p>
                         <a href="https://www.fuel-finder.service.gov.uk/motorist/price-report" target="_blank"
-                           class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium rounded-lg text-xs border border-emerald-200 transition-colors">
+                           class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 font-medium rounded-lg text-xs transition-colors">
                             <span>📢</span> Report a Price Discrepancy on Gov.UK
                         </a>
                     </div>
                 </div>
 
-                <div class="mt-6 pt-4 border-t border-slate-100 flex justify-end">
-                    <button @onclick="() => showInfoModal = false" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-medium text-sm hover:bg-slate-800">
+                <div class="mt-6 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-end">
+                    <button @onclick="() => showInfoModal = false" class="px-4 py-2 bg-neutral-950 dark:bg-neutral-100 text-white dark:text-neutral-950 rounded-lg font-medium text-sm hover:bg-neutral-800 dark:hover:bg-white">
                         Close
                     </button>
                 </div>
@@ -93,4 +97,19 @@
 
 @code {
     private bool showInfoModal = false;
+    private bool isDarkMode;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isDarkMode = await JS.InvokeAsync<bool>("pencePerLitreTheme.isDark");
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        isDarkMode = await JS.InvokeAsync<bool>("pencePerLitreTheme.toggle");
+    }
 }
