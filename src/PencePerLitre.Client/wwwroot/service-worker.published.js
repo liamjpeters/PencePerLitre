@@ -8,7 +8,8 @@ self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
-const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.pack$/, /\.webmanifest$/ ];
+const runtimeCacheName = 'runtime-data-cache-v1';
+const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/ ];
 const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
 // Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.
@@ -23,6 +24,7 @@ async function onInstall(event) {
     const assetsRequests = self.assetsManifest.assets
         .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))
         .filter(asset => !offlineAssetsExclude.some(pattern => pattern.test(asset.url)))
+        .filter(asset => !asset.url.startsWith('data/'))
         .map(asset => new Request(asset.url, { integrity: asset.hash, cache: 'no-cache' }));
     await caches.open(cacheName).then(cache => cache.addAll(assetsRequests));
 }
@@ -38,6 +40,17 @@ async function onActivate(event) {
 }
 
 async function onFetch(event) {
+    const requestUrl = new URL(event.request.url);
+    if (event.request.method === 'GET' && requestUrl.origin === self.origin) {
+        if (requestUrl.pathname.endsWith('/data/stations.json') || requestUrl.pathname.endsWith('/postcodes.pack')) {
+            return staleWhileRevalidate(event);
+        }
+
+        if (requestUrl.pathname.endsWith('/data/prices.json') || requestUrl.pathname.endsWith('/data/metadata.json')) {
+            return networkFirst(event.request);
+        }
+    }
+
     let cachedResponse = null;
     if (event.request.method === 'GET') {
         // For all navigation requests, try to serve index.html from cache,
@@ -52,4 +65,35 @@ async function onFetch(event) {
     }
 
     return cachedResponse || fetch(event.request);
+}
+
+async function staleWhileRevalidate(event) {
+    const cache = await caches.open(runtimeCacheName);
+    const cachedResponse = await cache.match(event.request);
+    const networkResponse = fetch(event.request).then(response => {
+        if (response.ok) {
+            cache.put(event.request, response.clone());
+        }
+        return response;
+    });
+
+    if (cachedResponse) {
+        event.waitUntil(networkResponse.catch(() => undefined));
+        return cachedResponse;
+    }
+
+    return networkResponse;
+}
+
+async function networkFirst(request) {
+    const cache = await caches.open(runtimeCacheName);
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            await cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return await cache.match(request) || Response.error();
+    }
 }

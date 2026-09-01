@@ -1,6 +1,56 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿@inject FuelDataService FuelService
+
+@if (!isReady)
+{
+    <div class="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+        <div class="relative flex items-center justify-center">
+            <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="absolute text-emerald-400 font-bold text-xs">PPL</div>
+        </div>
+        <div class="text-center px-4">
+            <h1 class="text-xl font-bold tracking-tight">Pence Per Litre</h1>
+            @if (loadError == null)
+            {
+                <p class="text-sm text-slate-400 mt-1">Loading live UK fuel prices & stations...</p>
+            }
+            else
+            {
+                <p class="text-sm text-red-300 mt-1">@loadError</p>
+                <button class="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg"
+                        @onclick="LoadDataAsync">
+                    Try again
+                </button>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+    </Router>
+}
+
+@code {
+    private bool isReady;
+    private string? loadError;
+
+    protected override Task OnInitializedAsync() => LoadDataAsync();
+
+    private async Task LoadDataAsync()
+    {
+        loadError = null;
+        try
+        {
+            await FuelService.EnsureLoadedAsync();
+            isReady = true;
+        }
+        catch
+        {
+            loadError = "Fuel data could not be loaded.";
+        }
+    }
+}

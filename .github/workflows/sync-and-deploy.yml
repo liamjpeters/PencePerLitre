@@ -32,6 +32,14 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Install Tailwind CSS CLI
+        run: |
+          curl --fail --location --silent --show-error \
+            --output "$RUNNER_TEMP/tailwindcss" \
+            https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.11/tailwindcss-linux-x64
+          chmod +x "$RUNNER_TEMP/tailwindcss"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
       - name: Run Tests
         run: dotnet test PencePerLitre.slnx --configuration Release
 

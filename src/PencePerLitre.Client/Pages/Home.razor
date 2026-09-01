@@ -126,14 +126,6 @@
 
     <!-- Main Content Body: Split View -->
     <div class="flex-1 flex overflow-hidden relative">
-        @if (isLoadingData)
-        {
-            <div class="absolute inset-0 z-30 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3">
-                <div class="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                <p class="text-sm font-semibold text-slate-700">Loading UK forecourts & prices...</p>
-            </div>
-        }
-
         <!-- Left Column: Results List -->
         <div class="w-full md:w-[480px] lg:w-[540px] flex flex-col border-r border-slate-200 bg-slate-50 flex-shrink-0 @(mobileViewMode == MobileView.Map ? "hidden md:flex" : "flex")">
             <!-- Results Header Summary -->
@@ -156,7 +148,7 @@
 
             <!-- Scrollable Stations List -->
             <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-                @if (!filteredStations.Any() && !isLoadingData)
+                @if (!filteredStations.Any())
                 {
                     <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-white rounded-2xl border border-dashed border-slate-300">
                         <span class="text-4xl mb-2">🔍</span>
@@ -391,7 +383,6 @@
     private enum MobileView { List, Map }
     private MobileView mobileViewMode = MobileView.List;
 
-    private bool isLoadingData = true;
     private bool isSearching = false;
     private string? statusMessage;
 
@@ -435,28 +426,19 @@
                 // 1. Initialize Map (UK overview)
                 await GeoService.InitMapAsync("fuel-map", dotNetHelper!, 54.5, -3.5, 6);
 
-                // 2. Load station data into memory
-                await FuelService.EnsureLoadedAsync();
-
-                // 3. Initialize on-device postcode pack (runs in background)
-                _ = GeoService.InitPostcodeEngineAsync();
-
-                isLoadingData = false;
-
-                // 4. Only run initial search if there's a query already set
+                // 2. Only run initial search if there's a query already set
                 if (!string.IsNullOrWhiteSpace(searchQuery))
                 {
                     await SearchByPostcode();
                 }
 
-                // 5. Force Leaflet to recalculate map size now the DOM has settled
+                // 3. Force Leaflet to recalculate map size now the DOM has settled
                 await Task.Delay(150);
                 await GeoService.InvalidateMapSizeAsync();
             }
             catch (Exception ex)
             {
-                statusMessage = $"Failed to initialize fuel data: {ex.Message}";
-                isLoadingData = false;
+                statusMessage = $"Failed to initialise the map: {ex.Message}";
             }
             StateHasChanged();
         }

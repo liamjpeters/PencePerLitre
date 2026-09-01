@@ -17,28 +17,6 @@
     <script type="importmap"></script>
     <script src="config.js"></script>
 
-    <!-- TailwindCSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#ecfdf5',
-                            100: '#d1fae5',
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                            900: '#064e3b',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
     <!-- Local Leaflet CSS & JS (No external CDN tracking) -->
     <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
     <script src="lib/leaflet/leaflet.js"></script>
@@ -54,7 +32,7 @@
                 <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                 <div class="absolute text-emerald-400 font-bold text-xs">PPL</div>
             </div>
-            <div class="text-center">
+            <div class="text-center px-4">
                 <h1 class="text-xl font-bold tracking-tight">Pence Per Litre</h1>
                 <p class="text-sm text-slate-400 mt-1">Loading live UK fuel prices & stations...</p>
             </div>
@@ -68,7 +46,16 @@
     </div>
 
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script>
+        window.addEventListener('load', () => {
+            const registerServiceWorker = () => navigator.serviceWorker.register('service-worker.js');
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(registerServiceWorker);
+            } else {
+                window.setTimeout(registerServiceWorker, 1000);
+            }
+        });
+    </script>
 </body>
 
 </html>

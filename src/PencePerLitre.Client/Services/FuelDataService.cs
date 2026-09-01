@@ -41,8 +41,12 @@ public class FuelDataService
     {
         try
         {
-            var stationsTask = _http.GetFromJsonAsync<List<StationDto>>("data/stations.json", SharedJsonOptions.Default);
-            var pricesTask = _http.GetFromJsonAsync<Dictionary<string, Dictionary<string, PriceDto>>>("data/prices.json", SharedJsonOptions.Default);
+            var stationsTask = _http.GetFromJsonAsync(
+                "data/stations.json",
+                SharedJsonContext.Default.StationList);
+            var pricesTask = _http.GetFromJsonAsync(
+                "data/prices.json",
+                SharedJsonContext.Default.PriceLookup);
 
             await Task.WhenAll(stationsTask, pricesTask);
 
