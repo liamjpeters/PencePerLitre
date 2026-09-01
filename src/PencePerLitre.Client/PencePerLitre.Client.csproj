@@ -22,7 +22,13 @@
     <ProjectReference Include="..\PencePerLitre.Shared\PencePerLitre.Shared.csproj" />
   </ItemGroup>
 
-  <Target Name="BuildTailwindCss" BeforeTargets="Build">
+  <ItemGroup>
+    <Content Remove="wwwroot\css\app.css" />
+    <Content Include="wwwroot\css\app.css" />
+  </ItemGroup>
+
+  <Target Name="BuildTailwindCss" BeforeTargets="PrepareForBuild">
+    <MakeDir Directories="wwwroot\css" />
     <Exec Command="&quot;$(TailwindExecutable)&quot; -i Styles/app.css -o wwwroot/css/app.css --minify"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
