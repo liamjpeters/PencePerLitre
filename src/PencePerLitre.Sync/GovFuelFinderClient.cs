@@ -13,35 +13,29 @@ public class GovFuelFinderClient : IDisposable
     private string? _accessToken;
     private DateTime _tokenExpiryUtc = DateTime.MinValue;
 
-    private const string BaseUrl = "https://www.fuel-finder.service.gov.uk";
-
-    private static string RedactSecret(string? value, int visiblePrefix = 4, int visibleSuffix = 4)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return "<empty>";
-        }
-
-        if (value.Length <= visiblePrefix + visibleSuffix)
-        {
-            return new string('*', value.Length);
-        }
-
-        var prefix = value[..visiblePrefix];
-        var suffix = value[^visibleSuffix..];
-        var middle = new string('*', Math.Max(0, value.Length - visiblePrefix - visibleSuffix));
-        return $"{prefix}{middle}{suffix}";
-    }
+    private const string DefaultBaseUrl = "https://www.fuel-finder.service.gov.uk";
 
     public GovFuelFinderClient(string clientId, string clientSecret)
     {
+
+        var baseUrl = Environment.GetEnvironmentVariable("FUEL_FINDER_BASE_URL")
+              ?? DefaultBaseUrl;
+
+
         _clientId = clientId;
         _clientSecret = clientSecret;
         _httpClient = new HttpClient
         {
-            BaseAddress = new Uri(BaseUrl),
+            BaseAddress = new Uri(baseUrl),
             Timeout = TimeSpan.FromSeconds(60)
         };
+
+        var proxyKey = Environment.GetEnvironmentVariable("FUEL_FINDER_PROXY_KEY");
+        if (!string.IsNullOrWhiteSpace(proxyKey))
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-Proxy-Key", proxyKey);
+        }
+
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PencePerLitre/1.0 (Mozilla/5.0; Windows NT 10.0; Win64; x64)");
     }
@@ -60,29 +54,12 @@ public class GovFuelFinderClient : IDisposable
             client_secret = _clientSecret
         };
 
-        Console.WriteLine($"OAuth request URL: {BaseUrl}/api/v1/oauth/generate_access_token");
-        Console.WriteLine($"OAuth request payload: {{ client_id={RedactSecret(_clientId)}, client_id_length={_clientId.Length}, client_secret={RedactSecret(_clientSecret)}, client_secret_length={_clientSecret.Length} }}");
-
         try
         {
             var response = await _httpClient.PostAsJsonAsync("/api/v1/oauth/generate_access_token", payload);
             var responseBody = await response.Content.ReadAsStringAsync();
 
             Console.WriteLine($"OAuth response status: {(int)response.StatusCode} {response.StatusCode}");
-            Console.WriteLine("OAuth response headers:");
-            foreach (var header in response.Headers)
-            {
-                Console.WriteLine($"  {header.Key}: {string.Join(", ", header.Value)}");
-            }
-
-            if (!string.IsNullOrWhiteSpace(responseBody))
-            {
-                Console.WriteLine($"OAuth response body: {responseBody}");
-            }
-            else
-            {
-                Console.WriteLine("OAuth response body: <empty>");
-            }
 
             if (!response.IsSuccessStatusCode)
             {
