@@ -44,7 +44,7 @@ jobs:
           FUEL_FINDER_CLIENT_ID: ${{ secrets.FUEL_FINDER_CLIENT_ID }}
           FUEL_FINDER_CLIENT_SECRET: ${{ secrets.FUEL_FINDER_CLIENT_SECRET }}
           FUEL_FINDER_BASE_URL: ${{ secrets.FUEL_FINDER_BASE_URL }}
-          FUEL_FINDER_PROXY_KEY: ${{ secrets.FUEL_FINDER_PROXY_KEY }
+          FUEL_FINDER_PROXY_KEY: ${{ secrets.FUEL_FINDER_PROXY_KEY }}
         run: |
           dotnet run --project src/PencePerLitre.Sync/PencePerLitre.Sync.csproj -- --output src/PencePerLitre.Client/wwwroot/data
 
