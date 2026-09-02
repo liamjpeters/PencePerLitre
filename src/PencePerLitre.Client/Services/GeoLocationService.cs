@@ -172,7 +172,8 @@ public class GeoLocationService : IAsyncDisposable
             var items = stations.Select(s => new
             {
                 station = new { id = s.Station.Id, lat = s.Station.Lat, lon = s.Station.Lon, name = s.Station.Name },
-                selectedFuelPrice = s.SelectedFuelPrice
+                selectedFuelPrice = s.SelectedFuelPrice,
+                effectivePrice = s.EffectivePrice
             }).ToArray();
 
             await module.InvokeVoidAsync("updateMapMarkers", items, userLocObj);

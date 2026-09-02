@@ -152,15 +152,21 @@ export function updateMapMarkers(stations, userLocation) {
 
     if (!stations) return;
 
+    const validEffectivePrices = stations.filter(s => s.effectivePrice != null).map(s => s.effectivePrice);
     const validPrices = stations.filter(s => s.selectedFuelPrice != null).map(s => s.selectedFuelPrice);
+    const minEffectivePrice = validEffectivePrices.length > 0 ? Math.min(...validEffectivePrices) : null;
     const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
 
     stations.forEach(item => {
         const s = item.station;
         const price = item.selectedFuelPrice;
-        const isCheapest = minPrice != null && price === minPrice;
+        const effectivePrice = item.effectivePrice;
+        const isCheapest = minEffectivePrice != null
+            ? effectivePrice === minEffectivePrice
+            : minPrice != null && price === minPrice;
 
         const priceText = price != null ? `${price.toFixed(1)}p` : 'N/A';
+        const effectivePriceText = effectivePrice != null ? `Effective ${effectivePrice.toFixed(1)}p` : '';
         const badgeBg = isCheapest
             ? 'bg-neutral-950 dark:bg-neutral-100 text-white dark:text-neutral-950 font-bold ring-2 ring-neutral-400'
             : 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-950 font-semibold';
@@ -169,7 +175,10 @@ export function updateMapMarkers(stations, userLocation) {
         markerElement.className = 'price-map-marker';
         markerElement.innerHTML = `
             <div class="cursor-pointer transition-transform transform hover:scale-110 shadow-lg rounded-full px-2.5 py-1 text-xs flex items-center gap-1 border border-white ${badgeBg}">
-                <span>${priceText}</span>
+                <span class="flex flex-col items-center leading-tight">
+                    <span>${priceText}</span>
+                    ${effectivePriceText ? `<span class="text-[9px] opacity-80">${effectivePriceText}</span>` : ''}
+                </span>
             </div>
         `;
         markerElement.addEventListener('click', () => {

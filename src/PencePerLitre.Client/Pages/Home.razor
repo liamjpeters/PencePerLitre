@@ -81,6 +81,10 @@
                         <select @bind="selectedSort" @bind:after="ApplyFilters" class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1 text-xs font-medium text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600">
                             <option value="price">Cheapest First</option>
                             <option value="distance">Nearest First</option>
+                            @if (vehicleSettings.Enabled)
+                            {
+                                <option value="effective">Effective Price</option>
+                            }
                         </select>
                     </div>
                 </div>
@@ -97,6 +101,11 @@
                         <span>24 Hours</span>
                     </label>
 
+                    <label class="flex items-center gap-1 cursor-pointer text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100 select-none ml-2">
+                        <input type="checkbox" @bind="vehicleSettings.Enabled" @bind:after="ToggleEffectivePricingAsync" class="rounded accent-neutral-950 dark:accent-neutral-100" />
+                        <span>Journey cost</span>
+                    </label>
+
                     <!-- Mobile List/Map View Toggle -->
                     <div class="flex md:hidden items-center bg-neutral-100 dark:bg-neutral-900 p-0.5 rounded-lg ml-2">
                         <button @onclick="() => mobileViewMode = MobileView.List" 
@@ -111,6 +120,34 @@
                 </div>
             </div>
         </div>
+
+        @if (vehicleSettings.Enabled)
+        {
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-neutral-100 dark:border-neutral-900 pt-3 flex flex-col lg:flex-row lg:items-end gap-3 text-xs">
+                <div class="flex-1">
+                    <div class="font-semibold text-neutral-800 dark:text-neutral-200">Estimated effective price</div>
+                    <p class="text-neutral-500 dark:text-neutral-400 mt-0.5">Assumes a return journey and filling the tank. Distance is approximate.</p>
+                </div>
+                <label class="flex flex-col gap-1 text-neutral-600 dark:text-neutral-400">
+                    <span>Tank capacity (litres)</span>
+                    <input type="number" min="1" step="1" @bind="vehicleSettings.TankCapacityLitres" @bind:event="oninput" @bind:after="VehicleSettingsChangedAsync"
+                           class="w-32 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1.5 text-neutral-950 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-400" />
+                </label>
+                <label class="flex flex-col gap-1 text-neutral-600 dark:text-neutral-400">
+                    <span>@(vehicleSettings.UseMetric ? "Efficiency (L/100 km)" : "Efficiency (UK MPG)")</span>
+                    <input type="number" min="0.1" step="0.1" @bind="vehicleSettings.Efficiency" @bind:event="oninput" @bind:after="VehicleSettingsChangedAsync"
+                           class="w-32 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1.5 text-neutral-950 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-400" />
+                </label>
+                <div class="flex items-center bg-neutral-100 dark:bg-neutral-900 rounded-md p-0.5 h-8">
+                    <button @onclick="() => SetEfficiencyUnitAsync(false)" class="px-2.5 h-7 rounded text-[11px] font-semibold @(vehicleSettings.UseMetric ? "text-neutral-500" : "bg-white dark:bg-neutral-700 text-neutral-950 dark:text-neutral-50 shadow-xs")">UK MPG</button>
+                    <button @onclick="() => SetEfficiencyUnitAsync(true)" class="px-2.5 h-7 rounded text-[11px] font-semibold @(vehicleSettings.UseMetric ? "bg-white dark:bg-neutral-700 text-neutral-950 dark:text-neutral-50 shadow-xs" : "text-neutral-500")">L/100 km</button>
+                </div>
+                @if (!VehicleSettingsValid)
+                {
+                    <p class="text-red-600 dark:text-red-400 lg:max-w-48">Enter positive tank capacity and efficiency values to calculate effective prices.</p>
+                }
+            </div>
+        }
     </div>
 
     <!-- Error/Status Bar if any -->
@@ -138,7 +175,13 @@
                     <strong>@filteredStations.Count</strong> station@(filteredStations.Count == 1 ? "" : "s") found
                 </span>
 
-                @if (cheapestPrice != null)
+                @if (vehicleSettings.Enabled && cheapestEffectivePrice != null)
+                {
+                    <span class="text-neutral-950 dark:text-neutral-100 font-bold bg-white dark:bg-neutral-800 px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700">
+                        Lowest effective: @cheapestEffectivePrice.Value.ToString("0.0")p
+                    </span>
+                }
+                else if (cheapestPrice != null)
                 {
                     <span class="text-neutral-950 dark:text-neutral-100 font-bold bg-white dark:bg-neutral-800 px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700">
                         Lowest: @cheapestPrice.Value.ToString("0.0")p
@@ -166,7 +209,9 @@
                 {
                     @foreach (var item in filteredStations)
                     {
-                        var isCheapest = cheapestPrice != null && item.SelectedFuelPrice == cheapestPrice;
+                        var isCheapest = vehicleSettings.Enabled && cheapestEffectivePrice != null
+                            ? item.EffectivePrice == cheapestEffectivePrice
+                            : cheapestPrice != null && item.SelectedFuelPrice == cheapestPrice;
                         <div class="bg-white dark:bg-neutral-900 rounded-lg p-4 border transition-colors cursor-pointer hover:border-neutral-400 dark:hover:border-neutral-600 @(isCheapest ? "border-neutral-950 dark:border-neutral-100 ring-1 ring-neutral-950 dark:ring-neutral-100" : "border-neutral-200 dark:border-neutral-800")"
                              @onclick="() => OpenStationDetails(item)">
                             
@@ -218,6 +263,12 @@
                                             <div class="text-[9px] opacity-80 uppercase tracking-wider font-semibold">
                                                 @FuelTypeConstants.GetDisplayName(selectedFuelType).Split('(')[0].Trim()
                                             </div>
+                                            @if (vehicleSettings.Enabled && item.EffectivePrice.HasValue)
+                                            {
+                                                <div class="text-[10px] mt-1 opacity-90 font-semibold">
+                                                    Effective @item.EffectivePrice.Value.ToString("0.0")p
+                                                </div>
+                                            }
                                         </div>
                                     }
                                     else
@@ -269,6 +320,12 @@
                         </span>
                         <h3 class="text-lg font-bold text-neutral-950 dark:text-neutral-100 mt-1">@selectedStation.Station.Name</h3>
                         <p class="text-xs text-neutral-500 dark:text-neutral-400">@selectedStation.Station.Address, @selectedStation.Station.Postcode</p>
+                        @if (vehicleSettings.Enabled && selectedStation.EffectivePrice.HasValue)
+                        {
+                            <p class="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mt-2">
+                                Estimated effective price: @selectedStation.EffectivePrice.Value.ToString("0.0")p
+                            </p>
+                        }
                     </div>
                     <button @onclick="() => selectedStation = null" class="text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-50 text-xl font-bold p-1">
                         ✕
@@ -400,6 +457,9 @@
     private List<StationViewItem> filteredStations = new();
     private StationViewItem? selectedStation;
     private double? cheapestPrice;
+    private double? cheapestEffectivePrice;
+    private VehicleSettings vehicleSettings = new();
+    private bool VehicleSettingsValid => vehicleSettings.TankCapacityLitres > 0 && vehicleSettings.Efficiency > 0;
 
     private DotNetObjectReference<object>? dotNetHelper;
 
@@ -415,6 +475,19 @@
     protected override async Task OnInitializedAsync()
     {
         dotNetHelper = DotNetObjectReference.Create<object>(this);
+
+        try
+        {
+            var storedSettings = await JS.InvokeAsync<VehicleSettings?>("pencePerLitreVehicleSettings.load");
+            if (storedSettings != null)
+            {
+                vehicleSettings = storedSettings;
+            }
+        }
+        catch
+        {
+            // Use defaults if browser storage is unavailable.
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -541,7 +614,8 @@
             supermarketOnly,
             false,
             open24hOnly,
-            selectedSort
+            selectedSort,
+            vehicleSettings.Enabled ? vehicleSettings : null
         );
 
         cheapestPrice = filteredStations
@@ -550,8 +624,62 @@
             .DefaultIfEmpty(null)
             .Min();
 
+        cheapestEffectivePrice = filteredStations
+            .Where(s => s.EffectivePrice.HasValue)
+            .Select(s => s.EffectivePrice)
+            .DefaultIfEmpty(null)
+            .Min();
+
         // Update map markers
         await GeoService.UpdateMapMarkersAsync(filteredStations, (currentLat, currentLon));
+    }
+
+    private async Task ToggleEffectivePricingAsync()
+    {
+        if (!vehicleSettings.Enabled && selectedSort == "effective")
+        {
+            selectedSort = "price";
+        }
+
+        await SaveVehicleSettingsAsync();
+        await ApplyFilters();
+    }
+
+    private async Task VehicleSettingsChangedAsync()
+    {
+        await SaveVehicleSettingsAsync();
+        if (vehicleSettings.Enabled)
+        {
+            await ApplyFilters();
+        }
+    }
+
+    private async Task SetEfficiencyUnitAsync(bool useMetric)
+    {
+        if (vehicleSettings.UseMetric == useMetric)
+        {
+            return;
+        }
+
+        if (vehicleSettings.Efficiency > 0)
+        {
+            vehicleSettings.Efficiency = 282.481 / vehicleSettings.Efficiency;
+        }
+
+        vehicleSettings.UseMetric = useMetric;
+        await VehicleSettingsChangedAsync();
+    }
+
+    private async Task SaveVehicleSettingsAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("pencePerLitreVehicleSettings.save", vehicleSettings);
+        }
+        catch
+        {
+            // Local storage is optional and unavailable in some browsing modes.
+        }
     }
 
     private async Task FocusOnMap(double lat, double lon)

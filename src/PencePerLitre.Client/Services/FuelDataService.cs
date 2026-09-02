@@ -116,7 +116,8 @@ public class FuelDataService
         bool supermarketOnly = false,
         bool motorwayOnly = false,
         bool open24HoursOnly = false,
-        string sortBy = "price")
+        string sortBy = "price",
+        VehicleSettings? vehicleSettings = null)
     {
         if (_stations == null || _prices == null) return new List<StationViewItem>();
 
@@ -154,12 +155,23 @@ public class FuelDataService
                 Station = station,
                 Prices = stationPrices,
                 DistanceMiles = Math.Round(dist, 1),
-                SelectedFuelPrice = priceValue
+                SelectedFuelPrice = priceValue,
+                EffectivePrice = vehicleSettings != null && priceValue.HasValue
+                    ? EffectivePriceCalculator.Calculate(priceValue.Value, dist, vehicleSettings)
+                    : null
             });
         }
 
         // Sort results
-        if (sortBy == "price")
+        if (sortBy == "effective" && vehicleSettings != null)
+        {
+            results = results
+                .OrderBy(r => r.EffectivePrice.HasValue ? 0 : 1)
+                .ThenBy(r => r.EffectivePrice ?? double.MaxValue)
+                .ThenBy(r => r.DistanceMiles ?? double.MaxValue)
+                .ToList();
+        }
+        else if (sortBy == "price")
         {
             // Stations with a price first (ordered by price ascending, then distance ascending), then unpriced
             results = results

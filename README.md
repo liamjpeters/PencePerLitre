@@ -12,8 +12,23 @@ Live site: [ppl.liampeters.co.uk](https://ppl.liampeters.co.uk/)
 - Shows stations on a CARTO vector basemap using MapLibre GL JS.
 - Supports browser geolocation when the user chooses **Near Me**.
 - Works as a Blazor WebAssembly progressive web app, with published static assets and selected data available for offline use.
+- Optionally estimates an effective fuel price that includes the estimated fuel cost of travelling to the station and back.
 
 Fuel reports can be missing, delayed, or out of date. The application displays the update time supplied with each price where it is available. It does not guarantee that a price is still available at the forecourt.
+
+## Journey Cost Estimates
+
+The optional **Journey cost** setting helps compare a station's advertised price with an estimated price that includes the fuel used to make a return journey. It is disabled by default, so the normal price comparison remains unchanged for users who do not enable it.
+
+When enabled, users can enter their tank capacity and fuel efficiency using either UK MPG or litres per 100 kilometres. The defaults are a 50-litre tank and 40 UK MPG. Settings are saved in the browser's local storage and are not sent to the application.
+
+The estimate assumes that the user is making a dedicated return journey, fills the tank, and values the fuel used for the journey at the station's displayed price. In simplified form:
+
+```text
+effective price = station price + (estimated return-journey fuel cost / tank capacity)
+```
+
+The current search distance is a straight-line distance rather than a road route, so the result is only an estimate. It does not account for traffic, road layout, driving style, hills, vehicle load, an existing journey in the same direction, or buying less than a full tank. The ordinary advertised price remains visible alongside the estimate.
 
 ## Architecture
 

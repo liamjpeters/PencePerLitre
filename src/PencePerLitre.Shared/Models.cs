@@ -274,6 +274,37 @@ public class StationViewItem
     public Dictionary<string, PriceDto> Prices { get; set; } = new();
     public double? DistanceMiles { get; set; }
     public double? SelectedFuelPrice { get; set; }
+    public double? EffectivePrice { get; set; }
+}
+
+public class VehicleSettings
+{
+    public bool Enabled { get; set; }
+    public double TankCapacityLitres { get; set; } = 50;
+    public double Efficiency { get; set; } = 40;
+    public bool UseMetric { get; set; }
+}
+
+public static class EffectivePriceCalculator
+{
+    private const double MilesToKilometres = 1.609344;
+    private const double ImperialGallonsToLitres = 4.54609;
+
+    public static double? Calculate(double fuelPricePence, double distanceMiles, VehicleSettings settings)
+    {
+        if (fuelPricePence <= 0 || distanceMiles < 0 || settings.TankCapacityLitres <= 0 || settings.Efficiency <= 0)
+        {
+            return null;
+        }
+
+        var roundTripDistance = distanceMiles * 2;
+        var journeyFuelLitres = settings.UseMetric
+            ? roundTripDistance * MilesToKilometres * settings.Efficiency / 100
+            : roundTripDistance / settings.Efficiency * ImperialGallonsToLitres;
+        var journeyCostPence = journeyFuelLitres * fuelPricePence;
+
+        return fuelPricePence + journeyCostPence / settings.TankCapacityLitres;
+    }
 }
 
 public static class FuelTypeConstants

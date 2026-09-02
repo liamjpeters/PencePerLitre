@@ -43,6 +43,20 @@
                     return applyTheme(isDark);
                 }
             };
+
+            globalThis.pencePerLitreVehicleSettings = {
+                load: () => {
+                    try {
+                        const stored = localStorage.getItem('ppl-vehicle-settings');
+                        return stored ? JSON.parse(stored) : null;
+                    }
+                    catch { return null; }
+                },
+                save: (settings) => {
+                    try { localStorage.setItem('ppl-vehicle-settings', JSON.stringify(settings)); }
+                    catch { }
+                }
+            };
         })();
     </script>
     <script src="config.js"></script>
