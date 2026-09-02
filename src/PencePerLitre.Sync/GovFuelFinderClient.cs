@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Net;
 using PencePerLitre.Shared;
 
 namespace PencePerLitre.Sync;
@@ -10,27 +11,34 @@ public class GovFuelFinderClient : IDisposable
     private readonly HttpClient _httpClient;
     private readonly string _clientId;
     private readonly string _clientSecret;
+    private readonly bool _ownsHttpClient;
     private string? _accessToken;
     private DateTime _tokenExpiryUtc = DateTime.MinValue;
 
     private const string DefaultBaseUrl = "https://www.fuel-finder.service.gov.uk";
 
-    public GovFuelFinderClient(string clientId, string clientSecret)
+    public GovFuelFinderClient(string clientId, string clientSecret, HttpClient? httpClient = null)
     {
-
-        var configuredBaseUrl = Environment.GetEnvironmentVariable("FUEL_FINDER_BASE_URL");
-        var baseUrl = string.IsNullOrWhiteSpace(configuredBaseUrl)
-            ? DefaultBaseUrl
-            : configuredBaseUrl;
-
-
         _clientId = clientId;
         _clientSecret = clientSecret;
-        _httpClient = new HttpClient
+        if (httpClient is null)
         {
-            BaseAddress = new Uri(baseUrl),
-            Timeout = TimeSpan.FromSeconds(60)
-        };
+            var configuredBaseUrl = Environment.GetEnvironmentVariable("FUEL_FINDER_BASE_URL");
+            var baseUrl = string.IsNullOrWhiteSpace(configuredBaseUrl)
+                ? DefaultBaseUrl
+                : configuredBaseUrl;
+
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(baseUrl),
+                Timeout = TimeSpan.FromSeconds(60)
+            };
+            _ownsHttpClient = true;
+        }
+        else
+        {
+            _httpClient = httpClient;
+        }
 
         var proxyKey = Environment.GetEnvironmentVariable("FUEL_FINDER_PROXY_KEY");
         if (!string.IsNullOrWhiteSpace(proxyKey))
@@ -114,6 +122,13 @@ public class GovFuelFinderClient : IDisposable
             if (!response.IsSuccessStatusCode)
             {
                 var err = await response.Content.ReadAsStringAsync();
+                if (IsUnavailableBatch(response.StatusCode, err))
+                {
+                    Console.WriteLine("No batch available (end of data).");
+                    hasMore = false;
+                    continue;
+                }
+
                 throw new InvalidOperationException($"Failed to fetch PFS batch {batchNumber} ({response.StatusCode}): {err}");
             }
 
@@ -170,6 +185,13 @@ public class GovFuelFinderClient : IDisposable
             if (!response.IsSuccessStatusCode)
             {
                 var err = await response.Content.ReadAsStringAsync();
+                if (IsUnavailableBatch(response.StatusCode, err))
+                {
+                    Console.WriteLine("No batch available (end of data).");
+                    hasMore = false;
+                    continue;
+                }
+
                 throw new InvalidOperationException($"Failed to fetch Fuel Prices batch {batchNumber} ({response.StatusCode}): {err}");
             }
 
@@ -200,9 +222,18 @@ public class GovFuelFinderClient : IDisposable
         return allPrices;
     }
 
+    private static bool IsUnavailableBatch(HttpStatusCode statusCode, string responseBody) =>
+        statusCode == HttpStatusCode.NotFound &&
+        responseBody.Contains("Requested batch", StringComparison.OrdinalIgnoreCase) &&
+        responseBody.Contains("not available", StringComparison.OrdinalIgnoreCase);
+
     public void Dispose()
     {
-        _httpClient.Dispose();
+        if (_ownsHttpClient)
+        {
+            _httpClient.Dispose();
+        }
+
         GC.SuppressFinalize(this);
     }
 }

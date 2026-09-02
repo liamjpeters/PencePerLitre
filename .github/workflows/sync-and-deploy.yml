@@ -2,8 +2,8 @@ name: Sync Fuel Prices and Deploy to GitHub Pages
 
 on:
   schedule:
-    # Run every 30 minutes
-    - cron: '*/30 * * * *'
+    # Run hourly at a non-round minute (UTC)
+    - cron: '17 * * * *'
   workflow_dispatch:
   push:
     branches: [ main ]
