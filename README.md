@@ -49,6 +49,14 @@ sequenceDiagram
 
 The sync uses incremental API requests where possible. A Fuel Finder response saying that a requested batch is not available is treated as an empty incremental result, so a quiet period does not fail the workflow. Other API errors remain failures.
 
+### Cloudflare Worker API proxy
+
+GitHub Actions runners may run outside the UK. The Fuel Finder API restricts access by geography, so the data-fetch workflow uses a small Cloudflare Worker as a controlled proxy. The Worker forwards the sync application's `/api/v1/` requests to the Gov.UK Fuel Finder service.
+
+The Worker requires an `X-Proxy-Key` request header. The value is stored as the `PROXY_KEY` secret in Cloudflare and as the `FUEL_FINDER_PROXY_KEY` GitHub secret. The sync application sends this header when that variable is configured. The Worker removes the private header before forwarding the request upstream, does not cache responses, and rejects requests that do not have the correct key or do not target an allowed API path.
+
+The Worker source is included for documentation in [docs/cloudflare/fuel-finder-proxy.js](docs/cloudflare/fuel-finder-proxy.js). It is not part of the Blazor client and is not deployed by this repository's GitHub Pages workflow. Deploy it separately as a Cloudflare Worker and configure its `PROXY_KEY` secret there.
+
 ### Data serving
 
 The client is published as static files to GitHub Pages. There is no application server or per-user API in this project. On startup, the Blazor WebAssembly client downloads the published station and price JSON files, then keeps them in browser memory for local search. The postcode pack is also downloaded once and searched locally.
@@ -123,7 +131,8 @@ To fetch or export data locally, you also need:
 
 - A Gov.UK One Login account and access to the Fuel Finder API. Follow the official guidance: [Access the latest fuel prices and forecourt data via API or email](https://www.gov.uk/guidance/access-the-latest-fuel-prices-and-forecourt-data-via-api-or-email).
 - Fuel Finder API credentials, normally supplied as `FUEL_FINDER_CLIENT_ID` and `FUEL_FINDER_CLIENT_SECRET`.
-- Optional `FUEL_FINDER_BASE_URL` and `FUEL_FINDER_PROXY_KEY` values if your API access requires them.
+- `FUEL_FINDER_BASE_URL`, set to the deployed Cloudflare Worker URL used as the Fuel Finder proxy.
+- `FUEL_FINDER_PROXY_KEY`, set to the shared secret that matches the Worker's Cloudflare `PROXY_KEY` secret.
 - A writable location for the SQLite database and exported files.
 
 The sync application supports a `.env` file in the repository root for local development. Do not commit credentials. A minimal local setup looks like this, with real values supplied locally:
@@ -131,8 +140,8 @@ The sync application supports a `.env` file in the repository root for local dev
 ```text
 FUEL_FINDER_CLIENT_ID=your-client-id
 FUEL_FINDER_CLIENT_SECRET=your-client-secret
-FUEL_FINDER_BASE_URL=https://www.fuel-finder.service.gov.uk
-FUEL_FINDER_PROXY_KEY=your-proxy-key-if-required
+FUEL_FINDER_BASE_URL=https://your-worker.workers.dev
+FUEL_FINDER_PROXY_KEY=your-shared-proxy-secret
 ```
 
 Run a normal sync with:
@@ -156,8 +165,8 @@ The workflow needs these GitHub secrets:
 
 - `FUEL_FINDER_CLIENT_ID`
 - `FUEL_FINDER_CLIENT_SECRET`
-- `FUEL_FINDER_BASE_URL`, if required by the API setup
-- `FUEL_FINDER_PROXY_KEY`, if required by the API setup
+- `FUEL_FINDER_BASE_URL`, the deployed Cloudflare Worker URL used to reach Fuel Finder.
+- `FUEL_FINDER_PROXY_KEY`, the shared secret matching the Worker's Cloudflare `PROXY_KEY` secret.
 - `CARTO_API_KEY`
 
 The workflow runner already provides the command-line tools used by the workflow, including Node.js for a small configuration-file generation step. Node.js and NPM are not requirements for local development of the application.
@@ -174,6 +183,7 @@ The workflow runner already provides the command-line tools used by the workflow
 
 - [Gov.UK Fuel Finder service](https://www.gov.uk/guidance/access-the-latest-fuel-prices-and-forecourt-data-via-api-or-email): source of forecourt metadata and fuel prices.
 - [CARTO](https://carto.com/): vector basemap styles and tiles. See the [CARTO basemaps documentation](https://docs.carto.com/faqs/carto-basemaps).
+- [Cloudflare Workers](https://developers.cloudflare.com/workers/): the geographic access proxy used by the GitHub Actions data-fetch job. Its documented source is [fuel-finder-proxy.js](docs/cloudflare/fuel-finder-proxy.js).
 - [MapLibre GL JS](https://maplibre.org/): open-source WebGL map renderer used by the current client.
 - [OpenStreetMap](https://www.openstreetmap.org/): source data credited by the CARTO basemap.
 - [NearMyPostcode](https://codeberg.org/lexbailey/nearmypostcode/): privacy-focused front-end JavaScript postcode lookup project by [Lex Bailey](https://codeberg.org/lexbailey). This project uses its approach and postcode pack format for local, browser-based postcode lookup.
