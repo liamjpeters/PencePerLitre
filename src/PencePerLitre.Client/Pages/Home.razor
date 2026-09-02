@@ -432,7 +432,7 @@
                     await SearchByPostcode();
                 }
 
-                // 3. Force Leaflet to recalculate map size now the DOM has settled
+                // 3. Force MapLibre to recalculate map size now the DOM has settled
                 await Task.Delay(150);
                 await GeoService.InvalidateMapSizeAsync();
             }

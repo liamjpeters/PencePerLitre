@@ -49,7 +49,7 @@ html.dark {
     background: #525252;
 }
 
-/* Leaflet Map overrides */
+/* MapLibre map overrides */
 #fuel-map {
     width: 100% !important;
     height: 100% !important;
@@ -61,7 +61,7 @@ html.dark {
     right: 0;
 }
 
-.leaflet-container {
+.maplibregl-map {
     font-family: inherit !important;
     width: 100% !important;
     height: 100% !important;
@@ -79,7 +79,7 @@ html.dark {
     border: none;
 }
 
-.leaflet-control-attribution {
+.maplibregl-ctrl-attrib {
     font-size: 10px !important;
     background: rgba(255, 255, 255, 0.85) !important;
     backdrop-filter: blur(4px);
@@ -87,18 +87,18 @@ html.dark {
     padding: 2px 5px !important;
 }
 
-.dark .leaflet-container {
+.dark .maplibregl-map {
     background-color: #171717 !important;
 }
 
-.dark .leaflet-bar a,
-.dark .leaflet-control-attribution {
+.dark .maplibregl-ctrl-group button,
+.dark .maplibregl-ctrl-attrib {
     background: rgba(23, 23, 23, 0.92) !important;
     border-color: #404040 !important;
     color: #d4d4d4 !important;
 }
 
-.dark .leaflet-control-attribution a {
+.dark .maplibregl-ctrl-attrib a {
     color: #fafafa !important;
 }
 
