@@ -8,10 +8,17 @@ public class FuelDataService
     private readonly HttpClient _http;
     private List<StationDto>? _stations;
     private Dictionary<string, Dictionary<string, PriceDto>>? _prices;
+    private DatasetMetadata? _metadata;
     private Task? _initializationTask;
 
     public bool IsLoaded => _stations != null && _prices != null;
     public int TotalStationsCount => _stations?.Count ?? 0;
+    public DatasetMetadata Metadata => _metadata ?? new DatasetMetadata
+    {
+        TotalStations = TotalStationsCount,
+        StationsWithPrices = _prices?.Count ?? 0,
+        TotalPriceRecords = _prices?.Values.Sum(prices => prices.Count) ?? 0
+    };
 
     public FuelDataService(HttpClient http)
     {
@@ -47,11 +54,38 @@ public class FuelDataService
             var pricesTask = _http.GetFromJsonAsync(
                 "data/prices.json",
                 SharedJsonContext.Default.PriceLookup);
+            var metadataTask = _http.GetFromJsonAsync(
+                "data/metadata.json",
+                SharedJsonContext.Default.DatasetMetadata);
 
-            await Task.WhenAll(stationsTask, pricesTask);
+            await Task.WhenAll(stationsTask, pricesTask, metadataTask);
 
             _stations = await stationsTask ?? new List<StationDto>();
             _prices = await pricesTask ?? new Dictionary<string, Dictionary<string, PriceDto>>();
+            _metadata = await metadataTask ?? new DatasetMetadata();
+            if (_metadata.TotalStations == 0)
+            {
+                _metadata.TotalStations = _stations.Count;
+            }
+
+            if (_metadata.StationsWithPrices == 0 && _prices.Count > 0)
+            {
+                _metadata.StationsWithPrices = _prices.Count;
+            }
+
+            if (_metadata.TotalPriceRecords == 0 && _prices.Count > 0)
+            {
+                _metadata.TotalPriceRecords = _prices.Values.Sum(prices => prices.Count);
+            }
+
+            if (_metadata.FuelTypesReported.Count == 0 && _prices.Count > 0)
+            {
+                _metadata.FuelTypesReported = _prices.Values
+                    .SelectMany(prices => prices.Keys)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(fuelType => fuelType)
+                    .ToList();
+            }
         }
         catch (Exception ex)
         {

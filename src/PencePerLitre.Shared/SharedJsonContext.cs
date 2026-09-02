@@ -10,4 +10,5 @@ namespace PencePerLitre.Shared;
 [JsonSerializable(
     typeof(Dictionary<string, Dictionary<string, PriceDto>>),
     TypeInfoPropertyName = "PriceLookup")]
+[JsonSerializable(typeof(DatasetMetadata), TypeInfoPropertyName = "DatasetMetadata")]
 public partial class SharedJsonContext : JsonSerializerContext;

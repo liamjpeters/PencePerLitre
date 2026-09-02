@@ -187,6 +187,27 @@ public class GovOAuthData
 // Optimized Client-Facing DTOs (used in Blazor Client)
 // -------------------------------------------------------------
 
+public class DatasetMetadata
+{
+    [JsonPropertyName("generatedAtUtc")]
+    public string? GeneratedAtUtc { get; set; }
+
+    [JsonPropertyName("lastFetchedAtUtc")]
+    public string? LastFetchedAtUtc { get; set; }
+
+    [JsonPropertyName("totalStations")]
+    public int TotalStations { get; set; }
+
+    [JsonPropertyName("stationsWithPrices")]
+    public int StationsWithPrices { get; set; }
+
+    [JsonPropertyName("totalPriceRecords")]
+    public int TotalPriceRecords { get; set; }
+
+    [JsonPropertyName("fuelTypesReported")]
+    public List<string> FuelTypesReported { get; set; } = new();
+}
+
 public class StationDto
 {
     [JsonPropertyName("id")]

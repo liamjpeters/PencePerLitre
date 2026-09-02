@@ -266,7 +266,7 @@ public class DatabaseManager : IDisposable
     /// <summary>
     /// Exports optimized JSON files for the Blazor WebAssembly frontend.
     /// </summary>
-    public void ExportData(string outputDirectory)
+    public void ExportData(string outputDirectory, DateTime? lastFetchedAtUtc = null)
     {
         Directory.CreateDirectory(outputDirectory);
 
@@ -392,8 +392,15 @@ public class DatabaseManager : IDisposable
         var meta = new
         {
             generatedAtUtc = DateTime.UtcNow.ToString("o"),
+            lastFetchedAtUtc = lastFetchedAtUtc?.ToUniversalTime().ToString("o"),
             totalStations = stations.Count,
-            totalPriceRecords = pricesDict.Values.Sum(p => p.Count)
+            stationsWithPrices = pricesDict.Count,
+            totalPriceRecords = pricesDict.Values.Sum(p => p.Count),
+            fuelTypesReported = pricesDict.Values
+                .SelectMany(p => p.Keys)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(fuelType => fuelType)
+                .ToArray()
         };
         File.WriteAllText(metaJsonPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
 

@@ -33,7 +33,7 @@ public class FuelDataServiceTests
         await service.EnsureLoadedAsync();
 
         Assert.True(service.IsLoaded);
-        Assert.Equal(4, handler.RequestCount);
+        Assert.Equal(6, handler.RequestCount);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject FuelDataService FuelService
 
 <div class="h-screen flex flex-col bg-neutral-50 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-100 overflow-hidden transition-colors">
     <!-- Navigation Header -->
@@ -62,6 +63,30 @@
                         </p>
                     </div>
 
+                    <div class="grid grid-cols-2 gap-2" aria-label="Dataset statistics">
+                        <div class="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-3">
+                            <div class="text-[11px] text-neutral-500 dark:text-neutral-400">Service stations</div>
+                            <div class="text-lg font-bold text-neutral-950 dark:text-neutral-50">@FuelService.Metadata.TotalStations.ToString("N0")</div>
+                        </div>
+                        <div class="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-3">
+                            <div class="text-[11px] text-neutral-500 dark:text-neutral-400">Stations with prices</div>
+                            <div class="text-lg font-bold text-neutral-950 dark:text-neutral-50">@FuelService.Metadata.StationsWithPrices.ToString("N0")</div>
+                        </div>
+                        <div class="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-3">
+                            <div class="text-[11px] text-neutral-500 dark:text-neutral-400">Price records</div>
+                            <div class="text-lg font-bold text-neutral-950 dark:text-neutral-50">@FuelService.Metadata.TotalPriceRecords.ToString("N0")</div>
+                        </div>
+                        <div class="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-3">
+                            <div class="text-[11px] text-neutral-500 dark:text-neutral-400">Fuel grades</div>
+                            <div class="text-lg font-bold text-neutral-950 dark:text-neutral-50">@FuelService.Metadata.FuelTypesReported.Count</div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                        Dataset last fetched from Gov.UK: <strong class="text-neutral-700 dark:text-neutral-300">@FormatDatasetTimestamp(FuelService.Metadata)</strong>.
+                        This is the latest successful sync completion time; the published files are then served as static data.
+                    </p>
+
                     <div>
                         <h4 class="font-semibold text-neutral-950 dark:text-neutral-100 mb-1">🔒 100% Privacy-First</h4>
                         <p>
@@ -111,5 +136,13 @@
     private async Task ToggleThemeAsync()
     {
         isDarkMode = await JS.InvokeAsync<bool>("pencePerLitreTheme.toggle");
+    }
+
+    private static string FormatDatasetTimestamp(DatasetMetadata metadata)
+    {
+        var timestamp = metadata.LastFetchedAtUtc ?? metadata.GeneratedAtUtc;
+        return DateTime.TryParse(timestamp, out var parsed)
+            ? parsed.ToUniversalTime().ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+            : "Not available";
     }
 }

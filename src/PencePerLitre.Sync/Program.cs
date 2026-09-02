@@ -150,7 +150,7 @@ try
     // Step 3: Export Optimized Static JSON for Blazor Client
     // -------------------------------------------------------------
     Console.WriteLine("\n[3/3] Exporting optimized static datasets for client...");
-    db.ExportData(outputDir);
+    db.ExportData(outputDir, DateTime.UtcNow);
 
     Console.ForegroundColor = ConsoleColor.Green;
     Console.WriteLine("\n✔ Data sync and export finished successfully.");
